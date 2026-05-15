@@ -1,0 +1,17 @@
+{
+  "name": "ai-everything",
+  "displayName": "AI Everything",
+  "description": "AI Everything is a collection of skills and tools that can be used to automate your workflow.",
+  "version": "1.0.0",
+  "author": {
+    "name": "jShow",
+    "email": "dev@jshow.org"
+  },
+  "homepage": "https://github.com/j-show/ai-everything",
+  "repository": "https://github.com/j-show/ai-everything.git",
+  "license": "MIT",
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks-cursor.json"
+}

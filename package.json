@@ -1,0 +1,24 @@
+{
+  "name": "ai-everything",
+  "displayName": "AI Everything",
+  "shortDescription": "AI Everything toolkits",
+  "version": "1.0.0",
+  "description": "AI Everything is a collection of skills and tools that can be used to automate your workflow.",
+  "author": {
+    "name": "jShow",
+    "email": "dev@jshow.org"
+  },
+  "homepage": "https://github.com/j-show/ai-everything",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/j-show/ai-everything.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:cursor": "npm run deploy -t cursor",
+    "deploy:codex": "npm run deploy -t codex",
+    "deploy:claude": "npm run deploy -t claude"
+  }
+}

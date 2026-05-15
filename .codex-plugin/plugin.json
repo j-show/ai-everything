@@ -1,0 +1,27 @@
+{
+  "name": "ai-everything",
+  "version": "1.0.0",
+  "description": "AI Everything is a collection of skills and tools that can be used to automate your workflow.",
+  "author": {
+    "name": "jShow",
+    "email": "dev@jshow.org"
+  },
+  "homepage": "https://github.com/j-show/ai-everything",
+  "repository": "https://github.com/j-show/ai-everything.git",
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AI Everything",
+    "shortDescription": "AI Everything toolkits",
+    "longDescription": "AI Everything is a collection of skills and tools that can be used to automate your workflow.",
+    "developerName": "jShow",
+    "category": "Coding",
+    "websiteURL": "https://github.com/j-show/ai-everything",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "brandColor": "#F59E0B",
+    "composerIcon": "./assets/small.svg",
+    "logo": "./assets/icon.png",
+    "screenshots": []
+  }
+}
