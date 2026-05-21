@@ -155,14 +155,25 @@ AI Everything 可通过 [Codex 官方插件市场](https://github.com/openai/plu
 
 ## 命令库
 
-斜杠命令源文件位于 `commands/`（Markdown 提示模板）。执行 `npm run deploy:cursor` 后，可在 Cursor 中使用：
+斜杠命令为 `commands/` 下的 Markdown 文件（文件名即 `/命令名`）。执行 `npm run deploy:cursor` 后可在 Cursor 中使用：
 
-| 命令 | 说明 |
+| 命令 | 源文件 | 说明 |
+| ---- | ------ | ---- |
+| `/review` | `commands/review.md` | 流水线：**test-helper** → **review-helper** → **doc-helper** |
+| `/skiller` | `commands/skiller.md` | 用 **skill-forge** 创建技能，**skill-review** 审查至无建议 |
+
+## 内置技能
+
+技能位于 `skills/`，安装到代理后自动加载（市场或 `npm run deploy`）。每目录含 `SKILL.md` 与可选 `references/`：
+
+| 技能 | 作用 |
 | ---- | ---- |
-| `/commit` | 根据改动总结提交信息，并创建 commit |
-| `/doc` | 根据实现补全 JSDoc、关键步骤注释与 README |
-| `/review` | 循环审查代码给出修复建议并执行，直到没有修复建议 |
-| `/test` | 检索实现代码并重新实现测试用例，可指定目录或全量测试 |
+| `commit-helper` | 结构化 git 提交 |
+| `doc-helper` | 从代码补文档（用于 `/review` 第三步） |
+| `test-helper` | 以实现为准重写测试（用于 `/review` 第一步） |
+| `review-helper` | P0–P3 审查闭环（用于 `/review` 第二步） |
+| `skill-forge` | 创建或更新技能 |
+| `skill-review` | 审查技能质量（用于 `/skiller`） |
 
 ---
 
@@ -175,7 +186,8 @@ AI Everything 可通过 [Codex 官方插件市场](https://github.com/openai/plu
 | `scripts/deploy.mjs`                        | 将 `commands/`、`rules/`、`skills/` 符号链接到 harness 目录 |
 | `commands/`                                 | Cursor 斜杠命令提示模板（Markdown）                      |
 | `rules/`                                    | 可选的代理规则（存在时由 deploy 同步）                   |
-| `skills/`                                   | 清单引用的技能目录                                       |
+| `skills/`                                   | 代理技能（`*-helper`、`skill-forge`、`skill-review`）    |
+| `commands/skiller.md`                       | 创建技能并审查的元命令                                   |
 | `.cursor-plugin/plugin.json`                | Cursor 插件清单                                          |
 | `.codex-plugin/plugin.json`                 | Codex 插件清单                                           |
 | `.claude-plugin/plugin.json`                | Claude 插件清单                                          |

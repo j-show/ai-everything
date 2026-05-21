@@ -5,4 +5,6 @@ package-lock.json
 yarn.lock
 bun.lockb
 
+.review/
+
 node_modules/

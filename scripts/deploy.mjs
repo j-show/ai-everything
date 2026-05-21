@@ -148,7 +148,7 @@ const parseNpmForwardedArgs = () => {
  *
  * @param {string[]} argv 通常为 `process.argv`
  * @returns {{ type: string | null, mode: string, help: boolean }}
- * @remarks 存在未知 `-` 开头参数时向 stderr 提示并 `process.exit(1)`
+ * @remarks 存在未知 `-` 开头参数时向 stderr 提示并 `process.exit(1)`；无 flag 的首个 positional 当作 type，第二个合法 mode 名当作 mode（兼容 npm 只转发值）
  */
 const parseArgs = (argv) => {
   const cli = parseArgsFromList(argv, 2);

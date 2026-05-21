@@ -27,11 +27,11 @@
 
 3. Commit the updated plugin JSON files together with `package.json` so published manifests stay consistent.
 
-`build` writes normalized JSON to `.cursor-plugin`, `.codex-plugin`, and `.claude-plugin` from a single source of truth. See JSDoc in [`scripts/build.mjs`](scripts/build.mjs).
+`build` uses the root `package.json` as the single source of truth and writes to `.cursor-plugin`, `.codex-plugin`, and `.claude-plugin`. See JSDoc in [`scripts/build.mjs`](scripts/build.mjs).
 
 ### Symlink resources into a harness (`deploy`)
 
-For local development, link this repo’s `commands/`, `rules/`, and `skills/` into a harness config directory:
+For local development, link this repo’s `commands/`, `rules/`, and `skills/` into the target harness config directory:
 
 | Script | Equivalent CLI |
 | ------ | -------------- |
@@ -52,16 +52,16 @@ Examples:
 # User-wide Cursor config (links into ~/.cursor/commands, etc.)
 npm run deploy:cursor
 
-# Project-local harness folder
+# Harness folder under the current project only
 npm run deploy -- --type cursor --mode local
 
-# Direct node invocation
+# Direct Node invocation
 node scripts/deploy.mjs --type codex --mode user
 ```
 
-If npm swallows flags, pass a double dash: `npm run deploy -- --type cursor`.
+If npm swallows flags, use a double dash: `npm run deploy -- --type cursor`.
 
-**Behavior**: Creates symlinks (Windows directories use junctions; file symlinks may fall back to hard links on `EPERM`). Skips paths already linked to this repo; warns and skips when a non-link file or directory already exists.
+**Behavior**: Creates symlinks (Windows directories use junctions; file symlinks may fall back to hard links on `EPERM`). Skips paths already linked to this repo; warns and skips when the target exists but is not a link.
 
 ---
 
@@ -91,7 +91,7 @@ Official reference: [Discover and install plugins](https://code.claude.com/docs/
 
 #### Official Marketplace
 
-- Install the plugin from Anthropic's official marketplace:
+- Install from Anthropic’s official marketplace:
 
   ```bash
   /plugin install ai-everything@claude-plugins-official
@@ -99,7 +99,7 @@ Official reference: [Discover and install plugins](https://code.claude.com/docs/
 
 #### Custom Marketplace
 
-The custom marketplace provides AI Everything and some other related plugins for Claude Code.
+The custom marketplace provides AI Everything and related plugins for Claude Code.
 
 - Register the marketplace:
 
@@ -107,7 +107,7 @@ The custom marketplace provides AI Everything and some other related plugins for
   /plugin marketplace add jshow-marketplace
   ```
 
-- Install the plugin from this marketplace:
+- Install from that marketplace:
 
   ```bash
   /plugin install ai-everything@jshow-marketplace
@@ -117,7 +117,7 @@ The custom marketplace provides AI Everything and some other related plugins for
 
 AI Everything is available via the [official Codex plugin marketplace](https://github.com/openai/plugins).
 
-- Open the plugin search interface:
+- Open the plugin search UI:
 
   ```bash
   /plugins
@@ -129,7 +129,7 @@ AI Everything is available via the [official Codex plugin marketplace](https://g
   ai-everything
   ```
 
-- Select `Install Plugin`.
+- Select **Install Plugin**.
 
 ### Codex App
 
@@ -143,26 +143,37 @@ Official reference: [Plugins – Codex](https://developers.openai.com/codex/plug
 
 Official reference: [Plugins | Cursor Docs](https://cursor.com/docs/plugins).
 
-- In Cursor Agent chat, install from marketplace:
+- In Cursor Agent chat, install from the marketplace:
 
   ```text
   /add-plugin ai-everything
   ```
 
-- Or search for "ai-everything" in the plugin marketplace.
+- Or search for **ai-everything** in the plugin marketplace.
 
 ---
 
 ## Commands library
 
-Slash commands live under `commands/` (Markdown prompts). After `npm run deploy:cursor`, they are available in Cursor as:
+Slash commands are Markdown files under `commands/` (filename → `/name`). After `npm run deploy:cursor`, they are available in Cursor:
 
-| Command   | Purpose |
-| --------- | ------- |
-| `/commit` | Summarize changes into a commit message and create a git commit |
-| `/doc`    | Add JSDoc, key-step comments, and README content from the implementation |
-| `/review` | Review code in a loop, suggest fixes, and apply until no further suggestions |
-| `/test`   | Inspect implementation and rewrite tests for a directory or the full suite |
+| Command | Source | Purpose |
+| ------- | ------ | ------- |
+| `/review` | `commands/review.md` | Pipeline: **test-helper** → **review-helper** → **doc-helper** |
+| `/skiller` | `commands/skiller.md` | Create a skill with **skill-forge**, review with **skill-review** until no suggestions remain |
+
+## Bundled skills
+
+Skills live under `skills/` and load when installed into the agent (marketplace or `npm run deploy`). Each folder contains `SKILL.md` plus optional `references/`:
+
+| Skill | Role |
+| ----- | ---- |
+| `commit-helper` | Structured git commits |
+| `doc-helper` | Documentation from code (step 3 of `/review`) |
+| `test-helper` | Implementation-first test rewrite (step 1 of `/review`) |
+| `review-helper` | P0–P3 review loop (step 2 of `/review`) |
+| `skill-forge` | Create or update skills |
+| `skill-review` | Audit skill quality (used in `/skiller`) |
 
 ---
 
@@ -175,7 +186,8 @@ Slash commands live under `commands/` (Markdown prompts). After `npm run deploy:
 | `scripts/deploy.mjs`                        | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
 | `commands/`                                 | Cursor slash-command prompt templates (Markdown)             |
 | `rules/`                                    | Optional agent rules (deployed when present)                 |
-| `skills/`                                   | Skill folders referenced by manifests                        |
+| `skills/`                                   | Agent skills (`*-helper`, `skill-forge`, `skill-review`)   |
+| `commands/skiller.md`                       | Meta-command to create and review a skill                    |
 | `.cursor-plugin/plugin.json`                | Cursor plugin manifest                                       |
 | `.codex-plugin/plugin.json`                 | Codex plugin manifest                                        |
 | `.claude-plugin/plugin.json`                | Claude plugin manifest                                       |
@@ -185,7 +197,7 @@ Slash commands live under `commands/` (Markdown prompts). After `npm run deploy:
 
 ### SessionStart hook environment
 
-`hooks/session-start` chooses the JSON shape for injected session context based on variables typically set by the host (not something you usually export by hand):
+`hooks/session-start` chooses the JSON shape for injected session context based on variables typically set by the host (you usually do not export these yourself):
 
 | Variable             | When set (typical) | Effect on output                                                                       |
 | -------------------- | ------------------ | -------------------------------------------------------------------------------------- |
