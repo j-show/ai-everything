@@ -39,7 +39,7 @@ npx skills add j-show/ai-everything --path skills/doc-helper
 
 ## 与斜杠命令的关系
 
-仓库不再提供 `/doc` 斜杠命令；请使用 `/doc-helper` 或技能自动触发。
+请使用 `/doc-helper` 或技能自动触发。
 
 ## 目录结构
 

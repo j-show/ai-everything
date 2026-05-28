@@ -14,11 +14,15 @@
     "url": "https://github.com/j-show/ai-everything.git"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:cursor": "npm run deploy -t cursor",
     "deploy:codex": "npm run deploy -t codex",
-    "deploy:claude": "npm run deploy -t claude"
+    "deploy:claude": "npm run deploy -t claude",
+    "deploy:qcode": "npm run deploy -t qcode"
   }
 }

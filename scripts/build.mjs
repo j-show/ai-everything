@@ -100,7 +100,7 @@ const updateClaudeMarketplace = (pkg) => {
   try {
     const json = readJson(fn);
 
-    json.name = `${pkg.name}-dev`;
+    json.name = `ai-everything-marketplace`;
     json.description = `Development marketplace for ${pkg.description}`;
     json.owner = {
       name: pkg.author.name,

@@ -1,6 +1,6 @@
 ---
 name: test-helper
-description: "Find implementation code and rewrite test cases to match current behavior. Inspects handlers, APIs, and call chains; rebuilds assertions and fixtures from the real contract. Use when user wants to rewrite tests, fix outdated tests, align tests with implementation, invoke test-helper, refresh test suite, or test a specific directory. Triggers: 'test', 'test-helper', 'rewrite tests', 'update tests', 'fix tests', 'test cases', 'unit tests', '重写测试', '测试用例', '补测试', '对齐测试', '实现为准'."
+description: "Find implementation code and rewrite test cases to match current behavior. 检索实现代码并重新实现测试用例. Inspects handlers, APIs, and call chains; rebuilds assertions and fixtures from the real contract. Use when user wants to rewrite tests, fix outdated tests, align tests with implementation, invoke test-helper, refresh test suite, or test a specific directory. Triggers: 'test', 'test-helper', 'rewrite tests', 'update tests', 'fix tests', 'test cases', 'unit tests', '重写测试', '测试用例', '补测试', '对齐测试', '实现为准', '检索实现', '重新实现测试'."
 ---
 
 # Test Helper
@@ -36,7 +36,7 @@ Test Helper Progress:
 
 ## Step 1: Scope ⚠️ REQUIRED
 
-**Goal wording** (same as `commands/test.md`): find implementation code and rewrite test cases.
+**Goal wording**: 检索实现代码，并重新实现测试用例（find implementation code and rewrite test cases).
 
 ### Directory scope
 
@@ -91,14 +91,19 @@ Run tests at the appropriate scope (single file, directory, or full suite). Defa
 - **Locate before writing** — no bulk rewrite without discovery.
 - **Minimum effective coverage** — drop tests that only duplicate implementation literals or dead APIs.
 
+## Common errors
+
+| Problem | Action |
+| ------- | ------ |
+| Infer behavior only from tests | Return to Step 2; build contract from implementation |
+| Keep tests for deleted APIs | Remove or replace with equivalent new-API scenarios |
+| Over-mock — integration never runs | Balance unit vs shallow integration per project norms |
+
 ## Anti-Patterns
 
-- Inferring behavior only from existing tests (return to Step 2)
-- Keeping tests for deleted APIs without equivalent new scenarios
-- Copying implementation internals into assertions (brittle coupling) unless testing a literal protocol
-- Over-mocking so integration paths never execute
-- Patching assertions one-by-one when the suite structure is obsolete — prefer full case rewrite
-- Changing production code silently when the user asked only to fix tests — explain first
+- Patching assertions one-by-one when the suite structure is obsolete — prefer full case rewrite (Step 4)
+- Changing production code silently when the user asked only to fix tests — explain first (Step 5)
+- Mass-rewriting without scope confirmation when many suites change (Step 1)
 
 ## Pre-Delivery Checklist
 

@@ -1,7 +1,7 @@
 /**
  * 部署脚本：将仓库根目录的 `commands`、`rules`、`skills` 通过符号链接映射到目标 harness 目录。
  *
- * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude`。
+ * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude` / `.q-code`。
  * - **local 模式**：链接到当前工作目录下同名文件夹，便于在单仓库内调试。
  *
  * 用法：
@@ -27,12 +27,13 @@ const projectRoot = path.resolve(__dirname, '..');
 
 /**
  * harness 类型与目标配置目录名的映射。
- * @type {Record<'cursor' | 'codex' | 'claude', string>}
+ * @type {Record<'cursor' | 'codex' | 'claude' | 'qcode', string>}
  */
 const TYPE_DIRS = {
   cursor: '.cursor',
   codex: '.codex',
   claude: '.claude',
+  qcode: '.q-code',
 };
 
 /** `--type` 允许的取值，与 `TYPE_DIRS` 的键一致。 */
@@ -208,10 +209,10 @@ const parseArgs = (argv) => {
 
 /** 向 stdout 打印用法说明。 */
 const printHelp = () => {
-  console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude> [--mode <user|local>]
+  console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude|qcode> [--mode <user|local>]
 
 Options:
-  -t, --type <cursor|codex|claude>  Harness type (required)
+  -t, --type <cursor|codex|claude|qcode>  Harness type (required)
   -m, --mode <user|local>           Install target: user home or cwd (default: user)
   -h, --help                        Show this help
 

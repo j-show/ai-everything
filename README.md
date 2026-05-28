@@ -8,7 +8,7 @@
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) **18+** (ES modules; `scripts/*.mjs` use `import` and modern `fs` APIs)
+- [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/*.mjs` use `import` and modern `fs` APIs)
 - No `npm install` required for maintainer scripts (stdlib only)
 - **Deploy on Windows**: Git Bash or another `bash` on `PATH` is only needed for hook scripts, not for `npm run deploy`
 
@@ -38,13 +38,14 @@ For local development, link this repo’s `commands/`, `rules/`, and `skills/` i
 | `npm run deploy:cursor` | `npm run deploy -t cursor` |
 | `npm run deploy:codex` | `npm run deploy -t codex` |
 | `npm run deploy:claude` | `npm run deploy -t claude` |
+| `npm run deploy:qcode` | `npm run deploy -t qcode` |
 
 **Options** (see [`scripts/deploy.mjs`](scripts/deploy.mjs)):
 
 | Flag | Values | Default | Meaning |
 | ---- | ------ | ------- | ------- |
-| `-t`, `--type` | `cursor`, `codex`, `claude` | _(required)_ | Target harness |
-| `-m`, `--mode` | `user`, `local` | `user` | `user` → `~/.cursor` (etc.); `local` → `./.cursor` under current cwd |
+| `-t`, `--type` | `cursor`, `codex`, `claude`, `qcode` | _(required)_ | Target harness |
+| `-m`, `--mode` | `user`, `local` | `user` | `user` → `~/.cursor` (etc.); `local` → `./.cursor` (etc.) under current cwd |
 
 Examples:
 

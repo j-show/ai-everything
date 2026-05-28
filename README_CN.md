@@ -8,7 +8,7 @@
 
 ## 环境要求
 
-- [Node.js](https://nodejs.org/) **18+**（ES 模块；`scripts/*.mjs` 使用 `import` 与现代 `fs` API）
+- [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/*.mjs` 使用 `import` 与现代 `fs` API）
 - 维护脚本无需 `npm install`（仅使用 Node 标准库）
 - **在 Windows 上部署**：钩子脚本需要 Git Bash 或其它 `bash`；`npm run deploy` 本身不依赖 bash
 
@@ -38,13 +38,14 @@
 | `npm run deploy:cursor` | `npm run deploy -t cursor` |
 | `npm run deploy:codex` | `npm run deploy -t codex` |
 | `npm run deploy:claude` | `npm run deploy -t claude` |
+| `npm run deploy:qcode` | `npm run deploy -t qcode` |
 
 **参数**（详见 [`scripts/deploy.mjs`](scripts/deploy.mjs)）：
 
 | 参数 | 取值 | 默认 | 含义 |
 | ---- | ---- | ---- | ---- |
-| `-t`, `--type` | `cursor`、`codex`、`claude` | 必填 | 目标 harness |
-| `-m`, `--mode` | `user`、`local` | `user` | `user` → 用户主目录下的 `~/.cursor` 等；`local` → 当前工作目录下的 `./.cursor` 等 |
+| `-t`, `--type` | `cursor`、`codex`、`claude`、`qcode` | 必填 | 目标 harness |
+| `-m`, `--mode` | `user`、`local` | `user` | `user` → 用户主目录下的 `~/.cursor` 等；`local` → 当前工作目录下的 `./.cursor`、`.q-code` 等 |
 
 示例：
 
