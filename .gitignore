@@ -8,3 +8,5 @@ bun.lockb
 .review/
 
 node_modules/
+
+__pycache__/

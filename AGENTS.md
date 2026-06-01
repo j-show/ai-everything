@@ -55,6 +55,7 @@
 | `doc-helper` | JSDoc、关键注释、README（文档须反映已验证行为） |
 | `skill-forge` | 创建或更新技能（本仓库扩展技能时**必读**） |
 | `skill-review` | 审计技能质量 |
+| `init-helper` | 扫描仓库并生成/刷新根目录 `AGENTS.md`（命令导向、Always/Ask/Never、SSOT 链接、`docs/agents/` 拆分） |
 
 各技能工作流以对应 `SKILL.md` 为准；细节放在 `references/`，勿在 `SKILL.md` 中堆长文。
 
