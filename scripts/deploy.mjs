@@ -3,6 +3,7 @@
  *
  * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude` / `.q-code`。
  * - **local 模式**：链接到当前工作目录下同名文件夹，便于在单仓库内调试。
+ * - **codex**：仅链接 `skills/`（不部署 `commands`、`rules`）。
  *
  * 用法：
  * ```bash
@@ -133,7 +134,9 @@ const parseNpmForwardedArgs = () => {
       result.help = result.help || npmArgs.help;
     }
 
-    const typeEq = cooked.find((a) => typeof a === 'string' && a.startsWith('--type='));
+    const typeEq = cooked.find(
+      (a) => typeof a === 'string' && a.startsWith('--type='),
+    );
     if (typeEq) {
       result.type = result.type || typeEq.slice('--type='.length);
     }
@@ -174,7 +177,12 @@ const parseArgs = (argv) => {
       arg.startsWith('--type=') ||
       arg.startsWith('--mode=')
     ) {
-      if (arg === '--type' || arg === '-t' || arg === '--mode' || arg === '-m') {
+      if (
+        arg === '--type' ||
+        arg === '-t' ||
+        arg === '--mode' ||
+        arg === '-m'
+      ) {
         i++;
       }
       continue;
@@ -200,7 +208,9 @@ const parseArgs = (argv) => {
 
   if (unknown.length > 0) {
     console.error(`Unknown argument: ${unknown.join(', ')}`);
-    console.error('Hint: npm run deploy -- --type cursor   (note the -- before flags)');
+    console.error(
+      'Hint: npm run deploy -- --type cursor   (note the -- before flags)',
+    );
     process.exit(1);
   }
 
@@ -235,6 +245,20 @@ const resolveTargetBase = (args) => {
     return path.join(os.homedir(), dirName);
   }
   return path.join(process.cwd(), dirName);
+};
+
+/**
+ * 按 harness 类型返回待部署的资源目录名列表。
+ * Codex 仅同步 skills。
+ *
+ * @param {string} type harness 类型
+ * @returns {string[]}
+ */
+const getResourceDirs = (type) => {
+  if (type === 'codex') {
+    return ['skills'];
+  }
+  return RESOURCE_DIRS;
 };
 
 /**
@@ -415,7 +439,9 @@ const createSymlink = (source, dest, linkType) => {
     const code = /** @type {NodeJS.ErrnoException} */ (err).code;
     if (isWindows && linkType === 'file' && code === 'EPERM') {
       fs.linkSync(absSource, absDest);
-      console.log(`Hard-linked: ${absDest} -> ${path.relative(cwd, absSource)}`);
+      console.log(
+        `Hard-linked: ${absDest} -> ${path.relative(cwd, absSource)}`,
+      );
       return;
     }
     throw err;
@@ -510,12 +536,16 @@ if (!args.type) {
 
 if (!VALID_TYPES.includes(args.type)) {
   const hint = args.type === 'curosr' ? ' (did you mean "cursor"?)' : '';
-  console.error(`Error: invalid type "${args.type}". Expected: ${VALID_TYPES.join(', ')}${hint}`);
+  console.error(
+    `Error: invalid type "${args.type}". Expected: ${VALID_TYPES.join(', ')}${hint}`,
+  );
   process.exit(1);
 }
 
 if (!VALID_MODES.includes(args.mode)) {
-  console.error(`Error: invalid mode "${args.mode}". Expected: ${VALID_MODES.join(', ')}`);
+  console.error(
+    `Error: invalid mode "${args.mode}". Expected: ${VALID_MODES.join(', ')}`,
+  );
   process.exit(1);
 }
 
@@ -526,7 +556,7 @@ console.log(`Project: ${projectRoot}`);
 console.log(`Target:  ${targetBase}`);
 console.log();
 
-for (const name of RESOURCE_DIRS) {
+for (const name of getResourceDirs(args.type)) {
   const srcDir = path.join(projectRoot, name);
   const destDir = path.join(targetBase, name);
 
