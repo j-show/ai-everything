@@ -86,6 +86,8 @@
 4. 可选：`python skills/skill-forge/scripts/init_skill.py` 初始化；`package_skill.py` 打包前再确认。
 5. 若改动影响 Cursor 加载路径，检查 `.cursor-plugin/plugin.json` 的 `skills` 字段（一般为 `./skills/`）。
 
+**常驻编码规范例外**：若规则需要在普通编码任务中持续生效（如 TypeScript 代码规范），不要主要依赖 `description` 堆关键词触发；将规则正文放在 `skills/<name>/references/`，通过 `hooks/session-start` 或 `rules/` 注入，并把 `description` 写窄，避免误触。
+
 ### 新增斜杠命令
 
 - 在 `commands/<name>.md` 增加 Markdown 模板。
@@ -97,6 +99,7 @@
 - 改 `package.json` → `npm run build` → 一并提交生成的 JSON。
 - `hooks/session-start` 当前会读取 `skills/using-ai-everything/SKILL.md` 注入会话；若该文件不存在，钩子会回退错误文本——新增/重命名该技能时需同步更新脚本路径。
 - 环境变量分支：`CURSOR_PLUGIN_ROOT` → `additional_context`；`CLAUDE_PLUGIN_ROOT` 且无 `COPILOT_CLI` → `hookSpecificOutput.additionalContext`；否则 → `additionalContext`。
+- 常驻约束（例如 TS 代码规范）优先通过 `SessionStart` 注入摘要或引用内容；Cursor 可配套 `rules/` 兜底，能机械检查的部分再交给 lint/typecheck/脚本。
 
 ## 易错点（必读）
 

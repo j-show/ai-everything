@@ -16,69 +16,22 @@
 
 ## Maintainer workflow
 
-### Sync plugin metadata (`build`)
-
-1. Edit fields in the root `package.json` (including `author`, `displayName`, `shortDescription` used by Codex and Cursor manifests).
-2. From the repository root:
-
-   ```bash
-   npm run build
-   ```
-
-3. Commit the updated plugin JSON files together with `package.json` so published manifests stay consistent.
-
-`build` uses the root `package.json` as the single source of truth and writes to `.cursor-plugin`, `.codex-plugin`, and `.claude-plugin`. See JSDoc in [`scripts/build.mjs`](scripts/build.mjs).
-
-### Symlink resources into a harness (`deploy`)
-
-For local development, link this repo’s `commands/`, `rules/`, and `skills/` into the target harness config directory:
+`package.json` is the single source of truth for published metadata. After changing it, run `npm run build` to sync `.cursor-plugin`, `.codex-plugin`, and `.claude-plugin`.
 
 | Script | Equivalent CLI |
 | ------ | -------------- |
+| `npm run build` | `node scripts/build.mjs` |
 | `npm run deploy:cursor` | `npm run deploy -t cursor` |
 | `npm run deploy:codex` | `npm run deploy -t codex` |
 | `npm run deploy:claude` | `npm run deploy -t claude` |
 | `npm run deploy:qcode` | `npm run deploy -t qcode` |
 
-**Options** (see [`scripts/deploy.mjs`](scripts/deploy.mjs)):
-
-| Flag | Values | Default | Meaning |
-| ---- | ------ | ------- | ------- |
-| `-t`, `--type` | `cursor`, `codex`, `claude`, `qcode` | _(required)_ | Target harness |
-| `-m`, `--mode` | `user`, `local` | `user` | `user` → `~/.cursor` (etc.); `local` → `./.cursor` (etc.) under current cwd |
-
-Examples:
-
 ```bash
-# User-wide Cursor config (links into ~/.cursor/commands, etc.)
-npm run deploy:cursor
-
-# Harness folder under the current project only
+# Link commands/rules/skills into a local harness folder
 npm run deploy -- --type cursor --mode local
-
-# Direct Node invocation
-node scripts/deploy.mjs --type codex --mode user
 ```
 
-If npm swallows flags, use a double dash: `npm run deploy -- --type cursor`.
-
-**Behavior**: Creates symlinks (Windows directories use junctions; file symlinks may fall back to hard links on `EPERM`). Skips paths already linked to this repo; warns and skips when the target exists but is not a link.
-
----
-
-## What’s inside (overview)
-
-Paths are defined in each harness’s plugin manifest. This repo currently uses:
-
-| Kind                        | Path (relative to plugin root) |
-| --------------------------- | ------------------------------ |
-| Skills                      | `./skills/`                    |
-| Agents (Cursor)             | `./agents/`                    |
-| Commands (Cursor)           | `./commands/`                  |
-| Hooks (Cursor)              | `./hooks/hooks-cursor.json`    |
-| Skills (Codex plugin field) | `./skills/`                    |
-
-Metadata (name, version, description, author, homepage, etc.) is sourced from the root `package.json`. After edits, run `npm run build` to sync into JSON under `.cursor-plugin`, `.codex-plugin`, and `.claude-plugin`.
+`deploy` links `commands/`, `rules/`, and `skills/` into `~/.cursor`, `~/.codex`, `~/.claude`, or `~/.q-code` by default; `--mode local` targets the current project folder. Use the double dash form when npm swallows flags.
 
 ---
 
@@ -86,75 +39,18 @@ Metadata (name, version, description, author, homepage, etc.) is sourced from th
 
 **Each harness has its own install flow.** If you use more than one of Claude Code, Codex, and Cursor, install this plugin **separately** in each product.
 
-### Claude Code
+| Harness | Install entry |
+| ------- | ------------- |
+| Claude Code | `/plugin install ai-everything@claude-plugins-official`, or add `jshow-marketplace` and install from there |
+| Codex CLI | Open `/plugins`, search `ai-everything`, then select **Install Plugin** |
+| Codex App | Open **Plugins**, find **AI Everything** / `ai-everything`, then follow the in-app prompts |
+| Cursor | Run `/add-plugin ai-everything` in Cursor Agent chat, or search the plugin marketplace |
 
-Official reference: [Discover and install plugins](https://code.claude.com/docs/en/discover-plugins.md) and [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces).
-
-#### Official Marketplace
-
-- Install from Anthropic’s official marketplace:
-
-  ```bash
-  /plugin install ai-everything@claude-plugins-official
-  ```
-
-#### Custom Marketplace
-
-The custom marketplace provides AI Everything and related plugins for Claude Code.
-
-- Register the marketplace:
-
-  ```bash
-  /plugin marketplace add jshow-marketplace
-  ```
-
-- Install from that marketplace:
-
-  ```bash
-  /plugin install ai-everything@jshow-marketplace
-  ```
-
-### Codex CLI
-
-AI Everything is available via the [official Codex plugin marketplace](https://github.com/openai/plugins).
-
-- Open the plugin search UI:
-
-  ```bash
-  /plugins
-  ```
-
-- Search for AI Everything:
-
-  ```bash
-  ai-everything
-  ```
-
-- Select **Install Plugin**.
-
-### Codex App
-
-Official reference: [Plugins – Codex](https://developers.openai.com/codex/plugins).
-
-1. Open **Plugins** in the app sidebar.
-2. Find **AI Everything** / **`ai-everything`** in the list or marketplace.
-3. Complete installation using the in-app prompts.
-
-### Cursor
-
-Official reference: [Plugins | Cursor Docs](https://cursor.com/docs/plugins).
-
-- In Cursor Agent chat, install from the marketplace:
-
-  ```text
-  /add-plugin ai-everything
-  ```
-
-- Or search for **ai-everything** in the plugin marketplace.
+Official references: [Claude Code plugins](https://code.claude.com/docs/en/discover-plugins.md), [Codex plugins](https://developers.openai.com/codex/plugins), [Cursor plugins](https://cursor.com/docs/plugins).
 
 ---
 
-## Commands library
+## Bundled resources
 
 Slash commands are Markdown files under `commands/` (filename → `/name`). After `npm run deploy:cursor`, they are available in Cursor:
 
@@ -163,13 +59,20 @@ Slash commands are Markdown files under `commands/` (filename → `/name`). Afte
 | `/review` | `commands/review.md` | Pipeline: **test-helper** → **review-helper** → **doc-helper** |
 | `/skiller` | `commands/skiller.md` | Create a skill with **skill-forge**, review with **skill-review** until no suggestions remain |
 
-## Bundled skills
+## Hook-injected guardrails
 
-Skills live under `skills/` and load when installed into the agent (marketplace or `npm run deploy`). Each folder contains `SKILL.md` plus optional `references/`:
+Use hooks for rules that should apply broadly, such as a project TypeScript style guide. Keep the related skill `description` narrow so the skill remains discoverable by explicit name without over-triggering on ordinary TypeScript work.
+
+Recommended pattern: put reusable rules under `skills/<name>/references/`, inject a concise summary from `hooks/session-start`, add a Cursor `rules/` file when useful, and use lint/typecheck/scripts for mechanically checkable rules.
+
+This avoids keyword-heavy descriptions for always-on constraints while keeping Codex, Cursor, Claude Code, and similar SDK-style harnesses aligned through the existing `SessionStart` branches.
+
+Skills live under `skills/`; each folder contains `SKILL.md` plus optional `references/`:
 
 | Skill | Role |
 | ----- | ---- |
 | `commit-helper` | Structured git commits |
+| `create-project-agent` | Creates the `buddy-helper` proposal, ensures its `TODO.md` plan, then hands AGENTS.md to `init-helper` |
 | `doc-helper` | Documentation from code (step 3 of `/review`) |
 | `test-helper` | Implementation-first test rewrite (step 1 of `/review`) |
 | `review-helper` | P0–P3 review loop (step 2 of `/review`) |
@@ -187,8 +90,7 @@ Skills live under `skills/` and load when installed into the agent (marketplace 
 | `scripts/deploy.mjs`                        | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
 | `commands/`                                 | Cursor slash-command prompt templates (Markdown)             |
 | `rules/`                                    | Optional agent rules (deployed when present)                 |
-| `skills/`                                   | Agent skills (`*-helper`, `skill-forge`, `skill-review`)   |
-| `commands/skiller.md`                       | Meta-command to create and review a skill                    |
+| `skills/`                                   | Agent skills and deterministic workflow CLIs                 |
 | `.cursor-plugin/plugin.json`                | Cursor plugin manifest                                       |
 | `.codex-plugin/plugin.json`                 | Codex plugin manifest                                        |
 | `.claude-plugin/plugin.json`                | Claude plugin manifest                                       |
