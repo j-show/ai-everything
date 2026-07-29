@@ -9,6 +9,7 @@
 ## 环境要求
 
 - **Node.js 22+**（ESM；`scripts/*.mjs` 仅用 Node 标准库，无需 `npm install`）
+- **`git` 在 `PATH`**：`npm run upgrade:skill` 使用浅层 sparse checkout 同步上游镜像 skills
 - 修改 `hooks/session-start` 或本地验证钩子时：Windows 需 **Git Bash** 或其它 `bash`（`hooks/run-hook.cmd` 为 Windows 入口）
 - 技能校验脚本：`skills/skill-forge/scripts/quick_validate.py`（需本机 Python 3）
 
@@ -22,10 +23,15 @@
 | `npm run deploy:cursor` | 将 `commands/`、`rules/`、`skills/` 符号链接到 `~/.cursor`（用户级） |
 | `npm run deploy -- --type cursor --mode local` | 链接到当前项目下的 `./.cursor`（本地调试） |
 | `npm run deploy:codex` / `deploy:claude` / `deploy:qcode` | 分别部署到 `~/.codex` / `~/.claude` / `~/.q-code` |
+| `npm run upgrade:skill` | 通过浅层 Git sparse checkout 同步配置的上游 skills（需 `git` 在 `PATH`） |
+| `npm run upgrade:design` | 同步 design 分组：`frontend-design`、`ui-ux-pro-max` |
+| `npm run upgrade:tool` | 同步 tool 分组：`grilling` |
 
 **完成标准（维护元数据时）**：改 `package.json` 后已执行 `npm run build`，且三份插件 JSON 与 `package.json` 字段一致。
 
 **完成标准（改技能时）**：对目标目录执行 `python skills/skill-forge/scripts/quick_validate.py skills/<name>` 通过（或按 skill-forge 交付清单自检）。
+
+**完成标准（同步上游镜像 skill 时）**：执行 `npm run upgrade:skill`（或对应分组快捷命令）成功；勿手改 `frontend-design`、`ui-ux-pro-max`、`grilling` 后当作长期本地定制。
 
 ## 目录与职责
 
@@ -34,6 +40,8 @@
 | `package.json` | 名称、版本、描述、作者等**唯一元数据来源** |
 | `scripts/build.mjs` | 同步插件清单 |
 | `scripts/deploy.mjs` | 符号链接 `commands`、`rules`、`skills` 到 harness 目录 |
+| `scripts/upgrade-skill.mjs` | 上游 skill 严格镜像同步（Git sparse checkout） |
+| `scripts/upgrade-skill-reporter.mjs` | 并行升级时的交互式/CI 输出 |
 | `skills/<name>/` | 代理技能：`SKILL.md` + 可选 `references/`、`scripts/`、`assets/` |
 | `commands/*.md` | Cursor 斜杠命令提示（文件名 → `/命令名`） |
 | `hooks/hooks-cursor.json` | Cursor `sessionStart` 钩子配置 |
@@ -50,12 +58,19 @@
 | 技能 | 用途 |
 | ---- | ---- |
 | `commit-helper` | 结构化 git 提交（勿擅自 `git config`、破坏性命令、`--no-verify`） |
+| `clean-helper` | 限定范围内、证据优先的死代码清理 |
 | `test-helper` | 按**当前实现**重写/对齐测试 |
 | `review-helper` | 变更范围内 P0–P3 审查与修复闭环 |
 | `doc-helper` | JSDoc、关键注释、README（文档须反映已验证行为） |
+| `reviewer` | 编排 **test-helper** → **review-helper** → **doc-helper**（对应 `/review`） |
 | `skill-forge` | 创建或更新技能（本仓库扩展技能时**必读**） |
 | `skill-review` | 审计技能质量 |
+| `skiller` | 编排 **skill-forge** → **skill-review** 循环（对应 `/skiller`） |
 | `init-helper` | 扫描仓库并生成/刷新根目录 `AGENTS.md`（命令导向、Always/Ask/Never、SSOT 链接、`docs/agents/` 拆分） |
+| `designer` | 编排 **ui-ux-pro-max** + **frontend-design** 做差异化 UI |
+| `frontend-design` | 上游镜像视觉设计指引；用 `npm run upgrade:design` 同步 |
+| `ui-ux-pro-max` | 上游镜像 UI/UX 情报；用 `npm run upgrade:design` 同步 |
+| `grilling` | 上游镜像方案拷问访谈；用 `npm run upgrade:tool` 同步 |
 
 各技能工作流以对应 `SKILL.md` 为准；细节放在 `references/`，勿在 `SKILL.md` 中堆长文。
 
@@ -111,6 +126,7 @@
 | Windows 下直接跑 `session-start` 无 bash | 用 `hooks/run-hook.cmd` 或 Git Bash |
 | `deploy` 期望同步 `hooks/` | `deploy.mjs` 仅链接 `commands`、`rules`、`skills`；钩子由插件清单 `hooks` 字段指向仓库内路径 |
 | 遗留目录 `~/.config/ai-everything/skills` | 会话钩子可能注入迁移警告；自定义技能应放到各 harness 官方 skills 目录 |
+| 手改上游镜像 skill（`frontend-design`、`ui-ux-pro-max`、`grilling`） | 用 `npm run upgrade:skill` 同步；严格镜像会覆盖本地改动 |
 
 ## 验证清单（改完再宣称完成）
 

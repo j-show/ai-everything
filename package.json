@@ -24,6 +24,8 @@
     "deploy:codex": "npm run deploy -t codex",
     "deploy:claude": "npm run deploy -t claude",
     "deploy:qcode": "npm run deploy -t qcode",
-    "upgrade:design": "node scripts/upgrade-design.mjs"
+    "upgrade:skill": "node scripts/upgrade-skill.mjs",
+    "upgrade:design": "npm run upgrade:skill -- --design",
+    "upgrade:tool": "npm run upgrade:skill -- --tool"
   }
 }
