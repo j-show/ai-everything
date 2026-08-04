@@ -40,7 +40,8 @@ Combine user `{{input}}` with **staged changes** when determining what to review
 
 | Input | Review scope |
 | ----- | -------------- |
-| `all` | All code on the current branch |
+| `all` | All code in the current project |
+| `self` | All code on the current branch |
 | _(empty)_ | Local commits not on `origin` + staged files |
 | commit hash | That commit’s changes + staged files |
 | other path/ref | Interpret per user intent; still include staging unless user excludes it |

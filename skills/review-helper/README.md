@@ -12,7 +12,7 @@ Review Helper 用 **报告→修复** 与 **校验→修复** 双循环约束模
 
 | 环节 | 内容 |
 | ---- | ---- |
-| Scope | `all` / 未推送相对 `origin` / 指定 commit + 暂存区 |
+| Scope | `all` / `self` / 未推送相对 `origin` / 指定 commit + 暂存区 |
 | 报告 | P0–P3、中文、`文件:起-止行`、保存 `.review/{时间}.md` |
 | 修复 | 按报告逐项改代码，再复审直至无项 |
 | 校验 | `pnpm check:all` → `check` → `test:all` → `test`（按存在性择一） |
