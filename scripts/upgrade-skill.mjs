@@ -34,6 +34,11 @@ export const SKILL_SOURCES = [
     url: 'https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling',
     groups: ['tool'],
   },
+  {
+    skill: 'domain-modeling',
+    url: 'https://github.com/mattpocock/skills/tree/main/skills/engineering/domain-modeling',
+    groups: ['tool'],
+  },
 ];
 
 /** 从配置派生的可用分组，顺序与首次出现顺序一致。 */
