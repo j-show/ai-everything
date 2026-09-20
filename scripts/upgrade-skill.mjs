@@ -20,6 +20,16 @@ import { createUpgradeReporter } from './upgrade-skill-reporter.mjs';
  */
 export const SKILL_SOURCES = [
   {
+    skill: 'skill-forge',
+    url: 'https://github.com/sanyuan0704/sanyuan-skills/tree/main/skills/skill-forge',
+    groups: ['engineering'],
+  },
+  {
+    skill: 'domain-modeling',
+    url: 'https://github.com/mattpocock/skills/tree/main/skills/engineering/domain-modeling',
+    groups: ['engineering'],
+  },
+  {
     skill: 'frontend-design',
     url: 'https://github.com/anthropics/skills/tree/main/skills/frontend-design',
     groups: ['design'],
@@ -33,12 +43,7 @@ export const SKILL_SOURCES = [
     skill: 'grilling',
     url: 'https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling',
     groups: ['tool'],
-  },
-  {
-    skill: 'domain-modeling',
-    url: 'https://github.com/mattpocock/skills/tree/main/skills/engineering/domain-modeling',
-    groups: ['tool'],
-  },
+  }
 ];
 
 /** 从配置派生的可用分组，顺序与首次出现顺序一致。 */
@@ -200,6 +205,13 @@ npm examples:
 `;
 
 const MAX_GIT_OUTPUT = 8 * 1024;
+const RM_OPTIONS = Object.freeze({
+  recursive: true,
+  force: true,
+  maxRetries: 5,
+  retryDelay: 100,
+});
+const UPGRADE_WORK_DIR_PATTERN = /^\..+-upgrade-.+$/;
 
 const appendBounded = (current, chunk) =>
   `${current}${chunk}`.slice(-MAX_GIT_OUTPUT);
@@ -275,6 +287,65 @@ export const getFileMode = ({
   return contentEqual ? null : 'M';
 };
 
+/**
+ * 判断目录名是否为 `mkdtemp` 生成的 skill 升级工作目录，
+ * 例如 `.frontend-design-upgrade-oizzQ5`。
+ *
+ * @param {string} name
+ * @returns {boolean}
+ */
+export const isUpgradeWorkDirName = (name) =>
+  UPGRADE_WORK_DIR_PATTERN.test(name);
+
+const removeDir = async (target, rm = fs.promises.rm) => {
+  await rm(target, RM_OPTIONS);
+};
+
+/**
+ * 删除 `skills/` 下残留的 `.<skill>-upgrade-*` 临时目录。
+ *
+ * 在整次升级结束后调用，覆盖单次同步失败、中断或 Windows 文件锁导致
+ * `finally` 未能删净的情况；不会删除正式 skill 目录。
+ *
+ * @param {string} root
+ * @param {{
+ *   readdir?: typeof fs.promises.readdir,
+ *   rm?: typeof fs.promises.rm,
+ * }} [io]
+ * @returns {Promise<void>}
+ */
+export const cleanupUpgradeWorkDirs = async (
+  root,
+  { readdir = fs.promises.readdir, rm = fs.promises.rm } = {},
+) => {
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+
+  const leftovers = entries.filter(
+    (entry) => entry.isDirectory() && isUpgradeWorkDirName(entry.name),
+  );
+
+  const results = await Promise.allSettled(
+    leftovers.map((entry) => removeDir(path.join(root, entry.name), rm)),
+  );
+  const failures = results.flatMap((result, index) =>
+    result.status === 'rejected'
+      ? [`${leftovers[index].name}: ${result.reason?.message || result.reason}`]
+      : [],
+  );
+
+  if (failures.length > 0) {
+    throw new Error(`Failed to remove upgrade work directories:\n${failures.join('\n')}`);
+  }
+};
+
 const pathExists = async (target) => {
   try {
     await fs.promises.access(target);
@@ -341,6 +412,7 @@ export const syncSkillMirror = async ({
   download,
   onDetail = () => {},
   rename = fs.promises.rename,
+  rm = fs.promises.rm,
 }) => {
   const localFiles = await collectRelativeFiles(localDir);
   const parentDir = path.dirname(localDir);
@@ -352,7 +424,6 @@ export const syncSkillMirror = async ({
   const stagingDir = path.join(workDir, 'staging');
   const backupDir = path.join(workDir, 'backup');
   let needsRestore = false;
-  let preserveWorkDir = false;
 
   await fs.promises.mkdir(stagingDir);
 
@@ -391,17 +462,18 @@ export const syncSkillMirror = async ({
         await rename(backupDir, localDir);
         needsRestore = false;
       } catch (rollbackError) {
-        preserveWorkDir = true;
         throw new AggregateError(
           [error, rollbackError],
-          `Skill swap and rollback failed; backup preserved at ${backupDir}`,
+          `Skill swap and rollback failed; backup was at ${backupDir}`,
         );
       }
     }
     throw error;
   } finally {
-    if (!preserveWorkDir) {
-      await fs.promises.rm(workDir, { recursive: true, force: true });
+    try {
+      await removeDir(workDir, rm);
+    } catch {
+      // End-of-run sweep retries leftover work dirs; do not mask the sync result.
     }
   }
 };
@@ -499,12 +571,14 @@ const SILENT_REPORTER = {
  * @param {typeof SKILL_SOURCES[number][]} sources
  * @param {(source: typeof SKILL_SOURCES[number], onDetail: (message: string) => void) => Promise<{ durationMs: number, fileCount: number }>} worker
  * @param {ReturnType<typeof createUpgradeReporter>} reporter
+ * @param {{ skillsRoot?: string }} [options]
  * @returns {Promise<void>}
  */
 export const syncSkillsConcurrently = async (
   sources,
   worker = syncSkill,
   reporter = SILENT_REPORTER,
+  { skillsRoot: cleanupRoot = skillsRoot } = {},
 ) => {
   let results;
   try {
@@ -523,7 +597,11 @@ export const syncSkillsConcurrently = async (
       }
     }));
   } finally {
-    reporter.finish();
+    try {
+      reporter.finish();
+    } finally {
+      await cleanupUpgradeWorkDirs(cleanupRoot);
+    }
   }
 
   const failures = results.flatMap((result, index) =>
@@ -564,20 +642,25 @@ export const runCli = async (argv = process.argv.slice(2)) => {
     console.error(`Error: ${error.message}\n`);
     console.log(formatHelp());
     process.exitCode = 1;
+    await cleanupUpgradeWorkDirs(skillsRoot);
     return;
   }
 
   console.log(`Project: ${projectRoot}`);
   console.log();
 
-  await syncSkillsConcurrently(
-    selected,
-    syncSkill,
-    createUpgradeReporter(selected),
-  );
+  try {
+    await syncSkillsConcurrently(
+      selected,
+      syncSkill,
+      createUpgradeReporter(selected),
+    );
 
-  console.log();
-  console.log('Upgrade skills done');
+    console.log();
+    console.log('Upgrade skills done');
+  } finally {
+    await cleanupUpgradeWorkDirs(skillsRoot);
+  }
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {

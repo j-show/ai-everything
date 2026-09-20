@@ -13,7 +13,9 @@ __pycache__/
 
 docs/superpowers/
 
+skills/.*/
+skills/skill-forge/
 skills/grilling/
+skills/domain-modeling/
 skills/frontend-design/
 skills/ui-ux-pro-max/
-skills/domain-modeling/
