@@ -35,13 +35,13 @@
 npm run deploy -- --type cursor --mode local
 ```
 
-`deploy` links `commands/`, `rules/`, and `skills/` into `~/.cursor`, `~/.codex`, `~/.claude`, or `~/.q-code` by default; `--mode local` targets the current project folder. Use the double dash form when npm swallows flags.
+`deploy` links existing resource directories into `~/.cursor`, `~/.claude`, or `~/.q-code` by default; for Codex it links only `skills/`. Missing directories are skipped. `--mode local` targets the current project folder. Use the double dash form when npm swallows flags.
 
 `upgrade:skill` updates every configured upstream skill by default. Use `npm run upgrade:skill -- --skill <name>` to update one skill, `--design` for `frontend-design` and `ui-ux-pro-max`, or `--tool` for `grilling`. When `--skill` is present, group flags are ignored. `upgrade:design` and `upgrade:tool` are shortcuts for their corresponding groups.
 
 When multiple skills run concurrently, interactive terminals show an independent rolling detail block for each skill. CI and redirected output automatically use append-only lines prefixed with the skill name.
 
-Each skill is synchronized as a strict upstream mirror through a shallow Git sparse checkout, so the upgrade does not consume GitHub REST API quota. The machine must have `git` available on `PATH`. `U` means a new local file, `M` means the upstream bytes changed, and `D` means an upstream deletion; unchanged files are not listed.
+Each configured upstream skill is synchronized as a strict mirror through a shallow Git sparse checkout, so the upgrade does not consume GitHub REST API quota. The machine must have `git` available on `PATH`. `U` means a new local file, `M` means the upstream bytes changed, and `D` means an upstream deletion; unchanged files are not listed.
 
 ---
 
@@ -62,20 +62,11 @@ Official references: [Claude Code plugins](https://code.claude.com/docs/en/disco
 
 ## Bundled resources
 
-Slash commands are Markdown files under `commands/` (filename → `/name`). After `npm run deploy:cursor`, they are available in Cursor:
+`commands/` is absent in this checkout, so deployment currently provides no slash commands from this repository. The deploy script skips missing resource directories.
 
-| Command | Source | Purpose |
-| ------- | ------ | ------- |
-| `/review` | `commands/review.md` | Pipeline: **test-helper** → **review-helper** → **doc-helper** |
-| `/skiller` | `commands/skiller.md` | Create a skill with **skill-forge**, review with **skill-review** until no suggestions remain |
+## SessionStart hook
 
-## Hook-injected guardrails
-
-Use hooks for rules that should apply broadly, such as a project TypeScript style guide. Keep the related skill `description` narrow so the skill remains discoverable by explicit name without over-triggering on ordinary TypeScript work.
-
-Recommended pattern: put reusable rules under `skills/<name>/references/`, inject a concise summary from `hooks/session-start`, add a Cursor `rules/` file when useful, and use lint/typecheck/scripts for mechanically checkable rules.
-
-This avoids keyword-heavy descriptions for always-on constraints while keeping Codex, Cursor, Claude Code, and similar SDK-style harnesses aligned through the existing `SessionStart` branches.
+`hooks/session-start` reads `skills/using-ai-everything/SKILL.md` and emits host-specific JSON. That skill file is absent in this checkout, so the hook currently embeds an error fallback instead of skill instructions. A legacy skills directory also adds a migration warning.
 
 Skills live under `skills/`; each folder contains `SKILL.md` plus optional `references/`:
 
@@ -90,11 +81,16 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `skill-forge` | Create or update skills |
 | `skill-review` | Audit skill quality (used in `/skiller`) |
 | `skiller` | Orchestrates **skill-forge** → **skill-review** loop (`/skiller`) |
+| `domain-modeling` | Sharpen project terminology and domain decisions |
 | `init-helper` | Scan the repo and generate or refresh root `AGENTS.md` |
+| `agent-creater` | Resolve missing information through grilling-style decision-tree rounds with recommended answers; create minimal `AGENTS.md` routes and reuse or implement agreed checks (no separate grilling installation required) |
+| `grilling-with-docs` | Interview, clarify domain language, and write agreed deliverables |
 | `designer` | Orchestrates **ui-ux-pro-max** + **frontend-design** for distinctive UI |
 | `frontend-design` | Upstream-mirrored visual design guidance (`upgrade:design`) |
 | `ui-ux-pro-max` | Upstream-mirrored UI/UX intelligence (`upgrade:design`) |
 | `grilling` | Upstream-mirrored plan stress-test interviews (`upgrade:tool`) |
+
+`skill-forge`, `domain-modeling`, `frontend-design`, `ui-ux-pro-max`, and `grilling` are upstream mirrors ignored by Git; run `npm run upgrade:skill` to fetch them in a fresh checkout.
 
 ---
 
@@ -107,13 +103,13 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `scripts/deploy.mjs`                        | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
 | `scripts/upgrade-skill.mjs`                 | Syncs upstream skills via shallow Git sparse checkout        |
 | `scripts/upgrade-skill-reporter.mjs`        | Terminal/CI reporter for parallel skill upgrades             |
-| `commands/`                                 | Cursor slash-command prompt templates (Markdown)             |
-| `rules/`                                    | Optional agent rules (deployed when present)                 |
+| `commands/`                                 | Optional slash-command templates (currently absent)          |
+| `rules/`                                    | Optional agent rules (currently absent)                      |
 | `skills/`                                   | Agent skills and deterministic workflow CLIs                 |
 | `.cursor-plugin/plugin.json`                | Cursor plugin manifest                                       |
 | `.codex-plugin/plugin.json`                 | Codex plugin manifest                                        |
 | `.claude-plugin/plugin.json`                | Claude plugin manifest                                       |
-| `.claude-plugin/marketplace.json`           | Claude marketplace definition (dev name `ai-everything-dev`) |
+| `.claude-plugin/marketplace.json`           | Claude marketplace definition (`ai-everything-marketplace`)  |
 | `hooks/hooks-cursor.json`                   | Cursor hook wiring (e.g. `sessionStart`)                     |
 | `hooks/session-start`, `hooks/run-hook.cmd` | SessionStart hook implementation (bash / Windows runner)     |
 
