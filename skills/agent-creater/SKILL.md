@@ -1,6 +1,6 @@
 ---
 name: agent-creater
-description: "Create or refresh minimal project AGENTS.md through a repository-grounded interview. Discover, ask, clarify, reuse, implement, and verify test scripts, validation scripts, test procedures, and operation-triggered routes with explicit ordering and authorization. Use when users ask to interview them before writing agent instructions, define conditional behaviors, or make an AI-readable verification workflow. Triggers: agent-creater, create AGENTS.md, generate agent rules, operation routing, verification workflow, 通过提问生成 AGENTS.md, 完善测试脚本, 验证脚本, 测试步骤, 条件路由, 精简代理说明."
+description: ""
 ---
 
 # Agent Creater
@@ -34,6 +34,7 @@ Default to the current repository root; clarify only when multiple target reposi
 Read the applicable agent instructions, manifests, script implementations, test configuration, CI workflows, and relevant README sections. Follow referenced files only as needed to establish commands, environments, and constraints.
 
 Build a working inventory, not a permanent project manual:
+
 - Which behavioral tests, validators, and manual procedures already exist?
 - What are their exact invocation, working directory, prerequisites, and observable pass/fail results?
 - Which operations already have required ordering, reading rules, or authorization boundaries?
@@ -60,6 +61,7 @@ When all relevant branches are settled and no fact gathering remains pending, su
 ## Step 3: Confirm the concrete plan
 
 Present:
+
 - Routes as `operation/condition -> ordered actions -> acceptance -> failure response`, including authorization.
 - Existing checks to reuse and exact scripts/configuration to add or change.
 - AGENTS.md create/merge/replace mode, planned procedure files, and any existing rule proposed for removal or changed meaning.
@@ -86,6 +88,7 @@ Load `references/output-examples.md` for placement, compact output, and worked c
 Write in the user's requested language; otherwise follow the target repository's instruction language, falling back to the conversation language.
 
 Use only sections with operative content:
+
 1. **Reading rules**: when to read which relevant document or section.
 2. **Operation routes**: conditions, ordered behaviors, completion gates, and failure behavior.
 3. **Boundaries**: project-specific restrictions and actions needing authorization.

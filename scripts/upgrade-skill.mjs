@@ -43,6 +43,11 @@ export const SKILL_SOURCES = [
     skill: 'grilling',
     url: 'https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling',
     groups: ['tool'],
+  },
+  {
+    skill: 'hatch-pet',
+    url: 'https://github.com/openai/skills/tree/main/skills/.curated/hatch-pet',
+    groups: ['tool'],
   }
 ];
 
@@ -410,7 +415,7 @@ const filesEqual = async (left, right) => {
 export const syncSkillMirror = async ({
   localDir,
   download,
-  onDetail = () => {},
+  onDetail = () => { },
   rename = fs.promises.rename,
   rm = fs.promises.rm,
 }) => {

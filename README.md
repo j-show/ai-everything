@@ -37,7 +37,7 @@ npm run deploy -- --type cursor --mode local
 
 `deploy` links existing resource directories into `~/.cursor`, `~/.claude`, or `~/.q-code` by default; for Codex it links only `skills/`. Missing directories are skipped. `--mode local` targets the current project folder. Use the double dash form when npm swallows flags.
 
-`upgrade:skill` updates every configured upstream skill by default. Use `npm run upgrade:skill -- --skill <name>` to update one skill, `--design` for `frontend-design` and `ui-ux-pro-max`, or `--tool` for `grilling`. When `--skill` is present, group flags are ignored. `upgrade:design` and `upgrade:tool` are shortcuts for their corresponding groups.
+`upgrade:skill` updates every configured upstream skill by default. Use `npm run upgrade:skill -- --skill <name>` to update one skill, `--design` for `frontend-design` and `ui-ux-pro-max`, or `--tool` for `grilling` and `hatch-pet`. When `--skill` is present, group flags are ignored. `upgrade:design` and `upgrade:tool` are shortcuts for their corresponding groups.
 
 When multiple skills run concurrently, interactive terminals show an independent rolling detail block for each skill. CI and redirected output automatically use append-only lines prefixed with the skill name.
 
@@ -89,8 +89,9 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `frontend-design` | Upstream-mirrored visual design guidance (`upgrade:design`) |
 | `ui-ux-pro-max` | Upstream-mirrored UI/UX intelligence (`upgrade:design`) |
 | `grilling` | Upstream-mirrored plan stress-test interviews (`upgrade:tool`) |
+| `hatch-pet` | Upstream-mirrored creation, validation, and packaging of Codex animated pets (`upgrade:tool`; uses installed `imagegen` for visual generation) |
 
-`skill-forge`, `domain-modeling`, `frontend-design`, `ui-ux-pro-max`, and `grilling` are upstream mirrors ignored by Git; run `npm run upgrade:skill` to fetch them in a fresh checkout.
+`skill-forge`, `domain-modeling`, `frontend-design`, `ui-ux-pro-max`, `grilling`, and `hatch-pet` are upstream mirrors ignored by Git; run `npm run upgrade:skill` to fetch them in a fresh checkout.
 
 ---
 

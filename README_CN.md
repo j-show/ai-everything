@@ -37,7 +37,7 @@ npm run deploy -- --type cursor --mode local
 
 `deploy` 默认将现有资源目录链接到 `~/.cursor`、`~/.claude` 或 `~/.q-code`；Codex 只链接 `skills/`。缺失的目录会跳过。`--mode local` 则写入当前项目目录。若 npm 吞掉参数，请使用双横线形式。
 
-`upgrade:skill` 默认更新配置中的全部上游 skill。使用 `npm run upgrade:skill -- --skill <name>` 更新单个 skill，使用 `--design` 更新 `frontend-design` 与 `ui-ux-pro-max`，或使用 `--tool` 更新 `grilling`。存在 `--skill` 时会忽略分组选项。`upgrade:design` 与 `upgrade:tool` 是对应分组的快捷命令。
+`upgrade:skill` 默认更新配置中的全部上游 skill。使用 `npm run upgrade:skill -- --skill <name>` 更新单个 skill，使用 `--design` 更新 `frontend-design` 与 `ui-ux-pro-max`，或使用 `--tool` 更新 `grilling` 与 `hatch-pet`。存在 `--skill` 时会忽略分组选项。`upgrade:design` 与 `upgrade:tool` 是对应分组的快捷命令。
 
 并行更新多个 skill 时，交互式终端会为每个 skill 显示独立的滚动明细区；CI 或重定向输出则自动使用带 skill 名前缀的逐行日志。
 
@@ -89,8 +89,9 @@ npm run deploy -- --type cursor --mode local
 | `frontend-design` | 上游镜像的视觉设计指引（`upgrade:design`） |
 | `ui-ux-pro-max` | 上游镜像的 UI/UX 设计情报（`upgrade:design`） |
 | `grilling` | 上游镜像的方案拷问式访谈（`upgrade:tool`） |
+| `hatch-pet` | 上游镜像的 Codex 动画宠物创建、验证与打包工作流（`upgrade:tool`；视觉生成依赖已安装的 `imagegen`） |
 
-`skill-forge`、`domain-modeling`、`frontend-design`、`ui-ux-pro-max`、`grilling` 是被 Git 忽略的上游镜像；全新检出后可运行 `npm run upgrade:skill` 获取。
+`skill-forge`、`domain-modeling`、`frontend-design`、`ui-ux-pro-max`、`grilling`、`hatch-pet` 是被 Git 忽略的上游镜像；全新检出后可运行 `npm run upgrade:skill` 获取。
 
 ---
 
