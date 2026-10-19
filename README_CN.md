@@ -22,6 +22,7 @@
 | 脚本 | 等价命令 |
 | ---- | -------- |
 | `npm run build` | `node scripts/build.mjs` |
+| `pnpm deploy:project <project dir> [--general \| --custom]` | `node scripts/deploy.mjs --project <project dir> [--general \| --custom]` |
 | `npm run deploy:cursor` | `npm run deploy -t cursor` |
 | `npm run deploy:codex` | `npm run deploy -t codex` |
 | `npm run deploy:claude` | `npm run deploy -t claude` |
@@ -33,7 +34,18 @@
 ```bash
 # 链接到当前项目下的本地 harness 文件夹
 npm run deploy -- --type cursor --mode local
+
+# 默认通用模式：部署到项目的 .agents 目录
+pnpm deploy:project "D:/my project"
+
+# 显式指定通用模式，效果相同
+pnpm deploy:project "D:/my project" --general
+
+# 自定义模式：直接部署到项目目录
+pnpm deploy:project "D:/my project" --custom
 ```
+
+`deploy:project` 必须指定一个项目目录。默认不带参数或显式指定 `--general` 时，将现有 `skills/`、`commands/`、`rules/` 链接到项目的 `.agents/` 下，例如 `D:/my project/.agents/skills`。指定 `--custom` 时，资源直接部署到项目目录下，例如 `D:/my project/skills`。模式参数可放在项目路径前后；`--general` 与 `--custom` 互斥。相对路径以命令工作目录为基准；不存在的目标目录会创建。已有内容会保留，等价链接会跳过。部署使用链接，因此链接资源仍指向本仓库。
 
 `deploy` 默认将现有资源目录链接到 `~/.cursor`、`~/.claude` 或 `~/.q-code`；Codex 只链接 `skills/`。缺失的目录会跳过。`--mode local` 则写入当前项目目录。若 npm 吞掉参数，请使用双横线形式。
 

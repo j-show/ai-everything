@@ -22,6 +22,7 @@
 | Script | Equivalent CLI |
 | ------ | -------------- |
 | `npm run build` | `node scripts/build.mjs` |
+| `pnpm deploy:project <project dir> [--general \| --custom]` | `node scripts/deploy.mjs --project <project dir> [--general \| --custom]` |
 | `npm run deploy:cursor` | `npm run deploy -t cursor` |
 | `npm run deploy:codex` | `npm run deploy -t codex` |
 | `npm run deploy:claude` | `npm run deploy -t claude` |
@@ -33,7 +34,18 @@
 ```bash
 # Link commands/rules/skills into a local harness folder
 npm run deploy -- --type cursor --mode local
+
+# General mode (default): link resources under the project's .agents folder
+pnpm deploy:project "D:/my project"
+
+# Explicitly select general mode (same result)
+pnpm deploy:project "D:/my project" --general
+
+# Custom mode: link resources directly under the project directory
+pnpm deploy:project "D:/my project" --custom
 ```
+
+`deploy:project` requires one project directory. By default (or with `--general`), it links available `skills/`, `commands/`, and `rules/` under the project's `.agents/`, for example `D:/my project/.agents/skills`. With `--custom`, resources go directly under the project directory, for example `D:/my project/skills`. Mode flags may precede or follow the project path; `--general` and `--custom` are mutually exclusive. Relative paths resolve from the command's working directory; missing target directories are created. Existing content is preserved and identical links are skipped. Deployment creates links, so linked resources continue to refer to this repository.
 
 `deploy` links existing resource directories into `~/.cursor`, `~/.claude`, or `~/.q-code` by default; for Codex it links only `skills/`. Missing directories are skipped. `--mode local` targets the current project folder. Use the double dash form when npm swallows flags.
 

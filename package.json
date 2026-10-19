@@ -20,6 +20,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "deploy": "node scripts/deploy.mjs",
+    "deploy:project": "node scripts/deploy.mjs --project",
     "deploy:cursor": "npm run deploy -t cursor",
     "deploy:codex": "npm run deploy -t codex",
     "deploy:claude": "npm run deploy -t claude",

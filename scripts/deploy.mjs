@@ -4,6 +4,7 @@
  * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude` / `.q-code`。
  * - **local 模式**：链接到当前工作目录下同名文件夹，便于在单仓库内调试。
  * - **codex**：仅链接 `skills/`（不部署 `commands`、`rules`）。
+ * - **project 入口**：默认链接到项目的 `.agents/`；`--custom` 则直接链接到项目根目录。
  *
  * 用法：
  * ```bash
@@ -220,13 +221,19 @@ const parseArgs = (argv) => {
 /** 向 stdout 打印用法说明。 */
 const printHelp = () => {
   console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude|qcode> [--mode <user|local>]
+       node scripts/deploy.mjs --project <project dir> [--general | --custom]
 
 Options:
   -t, --type <cursor|codex|claude|qcode>  Harness type (required)
   -m, --mode <user|local>           Install target: user home or cwd (default: user)
   -h, --help                        Show this help
+      --general                     Project deployment: use <project dir>/.agents (default)
+      --custom                      Project deployment: use <project dir> directly
 
 npm examples:
+  pnpm deploy:project "D:/my project"
+  pnpm deploy:project "D:/my project" --general
+  pnpm deploy:project "D:/my project" --custom
   npm run deploy -- --type cursor
   npm run deploy --type=cursor
   npm run deploy --type cursor
@@ -521,6 +528,55 @@ const mapSkillResources = (srcDir, destDir) => {
   }
 };
 
+/**
+ * 将指定资源部署到目标根目录，沿用链接去重及已有内容保护逻辑。
+ * @param {string} targetBase 目标根目录绝对路径
+ * @param {string[]} resourceDirs 待部署的资源目录名
+ */
+const deployResources = (targetBase, resourceDirs) => {
+  fs.mkdirSync(targetBase, { recursive: true });
+  console.log(`Project: ${projectRoot}`);
+  console.log(`Target:  ${targetBase}`);
+  console.log();
+
+  for (const name of resourceDirs) {
+    const srcDir = path.join(projectRoot, name);
+    const destDir = path.join(targetBase, name);
+    if (!fs.existsSync(srcDir)) {
+      continue;
+    }
+    if (name === 'skills') {
+      mapSkillResources(srcDir, destDir);
+    } else {
+      mapFileResources(name, srcDir, destDir);
+    }
+  }
+  console.log();
+  console.log('Deploy done');
+};
+
+// 独立解析 project 入口，项目路径不参与 harness 类型或 npm 环境参数推断。
+if (process.argv[2] === '--project') {
+  const projectArgs = process.argv.slice(3);
+  const custom = projectArgs.includes('--custom');
+  if (custom && projectArgs.includes('--general')) {
+    console.error('Error: --general and --custom cannot be used together.');
+    process.exit(1);
+  }
+  const paths = projectArgs.filter((arg) => !['--general', '--custom'].includes(arg));
+  if (paths.length === 1 && ['--help', '-h'].includes(paths[0])) {
+    printHelp();
+    process.exit(0);
+  }
+  if (paths.length !== 1 || !paths[0].trim() || paths[0].startsWith('-')) {
+    console.error('Error: exactly one project dir is required. Usage: pnpm deploy:project <project dir> [--general | --custom]');
+    process.exit(1);
+  }
+  const projectDir = path.resolve(paths[0]);
+  deployResources(custom ? projectDir : path.join(projectDir, '.agents'), RESOURCE_DIRS);
+  process.exit(0);
+}
+
 const args = parseArgs(process.argv);
 
 if (args.help) {
@@ -550,26 +606,4 @@ if (!VALID_MODES.includes(args.mode)) {
 }
 
 const targetBase = resolveTargetBase(args);
-fs.mkdirSync(targetBase, { recursive: true });
-
-console.log(`Project: ${projectRoot}`);
-console.log(`Target:  ${targetBase}`);
-console.log();
-
-for (const name of getResourceDirs(args.type)) {
-  const srcDir = path.join(projectRoot, name);
-  const destDir = path.join(targetBase, name);
-
-  if (!fs.existsSync(srcDir)) {
-    continue;
-  }
-
-  if (name === 'skills') {
-    mapSkillResources(srcDir, destDir);
-  } else {
-    mapFileResources(name, srcDir, destDir);
-  }
-}
-
-console.log();
-console.log('Deploy done');
+deployResources(targetBase, getResourceDirs(args.type));
