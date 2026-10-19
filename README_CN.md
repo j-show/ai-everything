@@ -88,7 +88,7 @@ pnpm deploy:project "D:/my project" --custom
 | `clean-helper` | 在限定范围内、证据优先地清理死代码 |
 | `test-helper` | 以实现为准重写测试（用于 `/review` 第一步） |
 | `review-helper` | P0–P3 审查闭环（用于 `/review` 第二步） |
-| `doc-helper` | 从代码补文档（用于 `/review` 第三步） |
+| `doc-helper` | 按范围从代码补文档，保留现有语言并核对证据（用于 `/review` 第三步） |
 | `reviewer` | 编排 **test-helper** → **review-helper** → **doc-helper**（`/review`） |
 | `skill-forge` | 创建或更新技能 |
 | `skill-review` | 审查技能质量（用于 `/skiller`） |

@@ -13,12 +13,25 @@ __pycache__/
 
 docs/superpowers/
 
+.agents/
+skills-lock.json
+
 skills/.*/
+
 skills/skill-forge/
+
 skills/grilling/
 skills/domain-modeling/
+
 skills/frontend-design/
 skills/ui-ux-pro-max/
 skills/hatch-pet/
+
+skills/brainstorming/
+skills/test-driven-development/
+skills/systematic-debugging/
+skills/requesting-code-review/
+skills/receiving-code-review/
+skills/verification-before-completion
 
 skills/*-cn/

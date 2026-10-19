@@ -20,14 +20,24 @@ import { createUpgradeReporter } from './upgrade-skill-reporter.mjs';
  */
 export const SKILL_SOURCES = [
   {
+    skill: 'hatch-pet',
+    url: 'https://github.com/openai/skills/tree/main/skills/.curated/hatch-pet',
+    groups: ['pet'],
+  },
+  {
     skill: 'skill-forge',
     url: 'https://github.com/sanyuan0704/sanyuan-skills/tree/main/skills/skill-forge',
-    groups: ['engineering'],
+    groups: ['skill'],
+  },
+  {
+    skill: 'grilling',
+    url: 'https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling',
+    groups: ['grilling'],
   },
   {
     skill: 'domain-modeling',
     url: 'https://github.com/mattpocock/skills/tree/main/skills/engineering/domain-modeling',
-    groups: ['engineering'],
+    groups: ['grilling'],
   },
   {
     skill: 'frontend-design',
@@ -40,14 +50,34 @@ export const SKILL_SOURCES = [
     groups: ['design'],
   },
   {
-    skill: 'grilling',
-    url: 'https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling',
-    groups: ['tool'],
+    skill: 'brainstorming',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/brainstorming',
+    groups: ['superpower'],
   },
   {
-    skill: 'hatch-pet',
-    url: 'https://github.com/openai/skills/tree/main/skills/.curated/hatch-pet',
-    groups: ['tool'],
+    skill: 'test-driven-development',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/test-driven-development',
+    groups: ['superpower'],
+  },
+  {
+    skill: 'systematic-debugging',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/systematic-debugging',
+    groups: ['superpower'],
+  },
+  {
+    skill: 'requesting-code-review',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/requesting-code-review',
+    groups: ['superpower'],
+  },
+  {
+    skill: 'receiving-code-review',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/receiving-code-review',
+    groups: ['superpower'],
+  },
+  {
+    skill: 'verification-before-completion',
+    url: 'https://github.com/obra/superpowers/tree/main/skills/verification-before-completion',
+    groups: ['superpower'],
   }
 ];
 

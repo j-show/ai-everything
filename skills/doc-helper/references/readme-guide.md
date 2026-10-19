@@ -12,12 +12,17 @@ Load during Step 4.
 
 Link to source; do not paste full API listings.
 
-## Bilingual layout
+## Language and edit scope
+
+Follow explicit user requirements and applicable repository instructions first. Otherwise preserve each existing document's language, headings, and unrelated text. Update only requested sections or claims directly affected by the target behavior; the checklist below is not a mandate to expand an existing README.
 
 | Condition | Output |
 | --------- | ------ |
-| `README_CN.md` exists | `README.md` English + `README_CN.md` Chinese, cross-linked |
-| Otherwise | Single `README.md`; default **Chinese** unless user requested English only |
+| Existing README | Preserve its language, including English when no Chinese companion exists |
+| Maintained translations exist and are in scope | Synchronize affected facts and preserve existing cross-links |
+| No README exists and creation is in scope | Follow project language conventions; use Chinese only when no preference or convention exists |
+
+Do not create translations or AGENTS files solely to complete a template. Preserve correct text instead of rephrasing it on each run.
 
 ## Checklist
 
@@ -30,4 +35,4 @@ Link to source; do not paste full API listings.
 
 ## Verify
 
-Every script name and path in README exists in the repo. No docs for unimplemented features.
+Check script names and target paths separately. If a declared command points to a missing file, report that limitation instead of presenting it as working. Do not run install, deployment, or service commands just to check documentation. No docs for unimplemented features; label examples or dependency behavior that could not be executed.

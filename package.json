@@ -18,6 +18,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "prepare": "npm run init:darwin",
+    "init:darwin": "npx skills add alchaincyf/darwin-skill",
     "build": "node scripts/build.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:project": "node scripts/deploy.mjs --project",

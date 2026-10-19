@@ -15,44 +15,50 @@ Copy this checklist and check off items as you complete them:
 Doc Helper Progress:
 
 - [ ] Step 1: Survey ⚠️ REQUIRED
-  - [ ] 1.1 Identify scope (path, module, or whole repo)
+  - [ ] 1.1 Resolve scope and mode from the request or caller
   - [ ] 1.2 Find entry files and exported public API
   - [ ] 1.3 Read package.json scripts and existing README
   - [ ] 1.4 List files to process (apply ignore rules)
-- [ ] Step 2: JSDoc ⚠️ REQUIRED
+- [ ] Step 2: JSDoc (code mode)
   - [ ] Load references/jsdoc-conventions.md
   - [ ] Document per file: functions, classes, interfaces, types, enums, constants
-- [ ] Step 3: Inline comments
+- [ ] Step 3: Inline comments (code mode)
   - [ ] Load references/inline-comments.md
   - [ ] Add comments only at key steps (why, not what)
-- [ ] Step 4: README
+- [ ] Step 4: README (README mode)
   - [ ] Load references/readme-guide.md
-  - [ ] Update README.md / README_CN.md per bilingual rules
+  - [ ] Correct relevant content while preserving language and structure
 - [ ] Step 5: Self-check ⚠️ REQUIRED
   - [ ] Run pre-delivery checklist below
 ```
 
 ## Step 1: Survey ⚠️ REQUIRED
 
-Ask if scope is unclear:
-- Which directory or files should be documented?
-- README only, code only, or both?
+Read applicable repository instructions. Reuse scope already supplied by the user or calling workflow; ask only when the target cannot be resolved from context.
+
+| Requested output | Run |
+| --- | --- |
+| README only | Steps 1, 4, 5; read source as evidence, do not edit it |
+| Code comments only | Steps 1, 2, 3, 5; do not edit README |
+| Both / general documentation | Steps 1–5, limited to the target and directly affected docs |
+
+Mark unused checklist steps N/A. Preserve correct existing text; fix stale claims and fill necessary gaps. Do not create companion documents or expand unrelated sections unless requested or required by repository instructions.
 
 Discover before writing:
 1. **Entry points** — main, index, CLI bin, plugin manifests.
 2. **Public API** — exported functions, classes, types; note internal-only symbols if user limited scope to public.
 3. **package.json** — `scripts`, `engines`, env-related config for README accuracy.
-4. **Existing README** — note `README_CN.md` presence (bilingual split rule).
+4. **Existing docs** — identify language, structure, and any maintained translations.
 
 ### Ignore directories
 
-Do **not** process files under: `test`, `tests`, `e2e`, `dist`, `coverage`, `.cursor`.
+Do not edit `test`, `tests`, `e2e`, `dist`, `coverage`, `.cursor`, dependencies, or generated files unless explicitly targeted. Read relevant tests and dependency files as evidence when needed.
 
 ### Scope confirmation
 
 If the repo is large and scope is unspecified, list candidate files and ask to proceed with all or a subset. ⚠️ Do not edit hundreds of files without alignment.
 
-## Step 2: JSDoc ⚠️ REQUIRED
+## Step 2: JSDoc (code mode)
 
 Load `references/jsdoc-conventions.md` before editing.
 
@@ -72,13 +78,18 @@ README = project-level (entry, install, config, layout, examples). JSDoc = symbo
 
 ## Step 5: Self-check ⚠️ REQUIRED
 
-Run the pre-delivery checklist below.
+Review the diff against the resolved scope. Verify referenced paths, commands, and documented branches. Use existing documentation lint/type checks when affected; do not install tools or execute deployment/service commands merely to validate their names. Distinguish inspected, executed, and unverified claims in the final report. If verification fails, correct documentation errors and report unrelated failures without changing implementation.
 
-## Core principles
+Stop when the requested facts are accurate: a repeat run on unchanged inputs should produce no edits just to rephrase, reorder, or add examples.
 
-- **Implementation first** — read code and callers, then write docs.
-- **Less but accurate** — why, boundaries, invariants; do not restate obvious code.
-- **README vs source** — split responsibilities as above.
+## Evidence and fallback
+
+| Trigger | Action | If unresolved |
+| --- | --- | --- |
+| Third-party behavior needs verification | Match the installed/locked version; inspect local implementation and declarations. Use Context7 or version-matched official docs for missing facts | Report the exact evidence gap; omit unsupported claims and continue independent work |
+| Context7 unavailable | Use the same local evidence or accessible official documentation | Do not invent behavior or install tooling to bypass the limitation |
+| Existing docs conflict with code | Trace current implementation, callers, and relevant tests; correct stale docs | If the contract remains ambiguous, ask about that claim only; do not silently fix code |
+| Manifest, command target, or dependency runtime missing | Inspect available project evidence and name the missing item | Do not invent commands or claim successful execution from declarations alone |
 
 ## Anti-Patterns
 
@@ -88,7 +99,9 @@ Run the pre-delivery checklist below.
 - Commenting every trivial line
 - Full API reference inside README
 - Processing ignored directories
-- Library API from memory — use Context7 (`resolve-library-id` → `query-docs`) when documenting third-party behavior
+- Library API from memory or mismatched-version documentation
+- Changing existing language, creating translations, or expanding scope without a request or repository requirement
+- Treating a declared command or dependency contract as a successful runtime test
 - Restructuring code only to fit comments
 
 ## Pre-Delivery Checklist
@@ -103,8 +116,9 @@ Run the pre-delivery checklist below.
 - [ ] Name, positioning, env requirements (if any), install/commands match `package.json`
 - [ ] Config/env vars and directory overview when applicable
 - [ ] Usage examples for main exports or workflows
-- [ ] `README_CN.md` rule: English `README.md` + Chinese `README_CN.md` cross-linked; else single README (Chinese default unless user asked for English only)
+- [ ] Existing language and unrelated sections preserved; translations follow repository/user requirements
 - [ ] Paths and script names verified in repo
 
 ### Scope
-- [ ] Ignored directories skipped; user scope respected
+- [ ] Only resolved outputs changed; skipped steps marked N/A
+- [ ] No executable behavior changed; validation results and unresolved evidence gaps reported

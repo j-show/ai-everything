@@ -26,7 +26,7 @@ Only for non-obvious public/exported APIs and class methods. **One example per o
 
 ## Third-party libraries
 
-Use Context7 (`resolve-library-id` → `query-docs`) before documenting library APIs or migrations.
+Follow the evidence and fallback table in SKILL.md: verify the installed/locked version and local evidence first, then consult Context7 or matching official docs for missing facts. Type declarations document a contract; they do not prove runtime behavior was tested.
 
 ## Quality
 

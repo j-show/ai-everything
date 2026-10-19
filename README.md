@@ -88,7 +88,7 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `clean-helper` | Evidence-first dead-code cleanup within a scoped area |
 | `test-helper` | Implementation-first test rewrite (step 1 of `/review`) |
 | `review-helper` | P0–P3 review loop (step 2 of `/review`) |
-| `doc-helper` | Documentation from code (step 3 of `/review`) |
+| `doc-helper` | Scoped documentation from code; preserves existing language and verifies evidence (step 3 of `/review`) |
 | `reviewer` | Orchestrates **test-helper** → **review-helper** → **doc-helper** (`/review`) |
 | `skill-forge` | Create or update skills |
 | `skill-review` | Audit skill quality (used in `/skiller`) |
