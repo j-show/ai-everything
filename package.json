@@ -30,5 +30,8 @@
     "upgrade:skill": "node scripts/upgrade-skill.mjs",
     "upgrade:design": "npm run upgrade:skill -- --design",
     "upgrade:tool": "npm run upgrade:skill -- --tool"
+  },
+  "devDependencies": {
+    "tar": "^7.5.22"
   }
 }

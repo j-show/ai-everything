@@ -17,6 +17,8 @@ docs/superpowers/
 skills-lock.json
 
 skills/.*/
+skills/*-cn/
+skills/**/test-prompts.json
 
 skills/skill-forge/
 
@@ -33,5 +35,3 @@ skills/systematic-debugging/
 skills/requesting-code-review/
 skills/receiving-code-review/
 skills/verification-before-completion
-
-skills/*-cn/

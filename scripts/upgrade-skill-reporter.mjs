@@ -211,7 +211,7 @@ const createTtyReporter = (
 /**
  * Create a reporter for concurrent skill upgrades.
  *
- * @param {{ skill: string, url: string }[]} sources
+ * @param {{ skill: string, repo: string }[]} sources
  * @param {{
  *   stream?: NodeJS.WriteStream,
  *   now?: () => number,
@@ -231,11 +231,11 @@ export const createUpgradeReporter = (
   } = {},
 ) => {
   const states = new Map(
-    sources.map(({ skill, url }) => [
+    sources.map(({ skill, repo }) => [
       skill,
       {
         skill,
-        source: sourceLabel(url),
+        source: sourceLabel(repo),
         status: 'WAIT',
         startedAt: now(),
         durationMs: 0,
