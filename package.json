@@ -29,6 +29,7 @@
     "deploy:claude": "npm run deploy -t claude",
     "deploy:qcode": "npm run deploy -t qcode",
     "upgrade:skill": "node scripts/upgrade-skill.mjs",
+    "upgrade:rule": "node scripts/upgrade-rule.mjs",
     "upgrade:design": "npm run upgrade:skill -- --design",
     "upgrade:mattpocock": "npm run upgrade:skill -- --mattpocock",
     "upgrade:superpower": "npm run upgrade:skill -- --superpower"

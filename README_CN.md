@@ -9,7 +9,7 @@
 ## 环境要求
 
 - [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/*.mjs` 使用 `import` 与现代 `fs` API）
-- Skill 升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
+- 技能和规则升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
 - 默认 `--git` 不加载 `tar`。`--fetch` 只在提取归档时加载该开发依赖；使用前运行 `npm install --ignore-scripts` 安装。构建和部署脚本只依赖 Node 标准库。常规安装还会执行 `prepare` → `init:darwin`（`npx skills add alchaincyf/darwin-skill`）；需要该技能时可单独执行 `npm run init:darwin`。
 - **在 Windows 上部署**：钩子脚本需要 Git Bash 或其它 `bash`；`npm run deploy` 本身不依赖 bash
 
@@ -29,6 +29,7 @@
 | `npm run deploy:qcode` | `npm run deploy -- -t qcode` |
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
 | `npm run upgrade:skill` | `node scripts/upgrade-skill.mjs` |
+| `npm run upgrade:rule` | `node scripts/upgrade-rule.mjs` |
 | `npm run upgrade:design` | `node scripts/upgrade-skill.mjs --design` |
 | `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
 
@@ -68,6 +69,8 @@ npm run upgrade:skill -- --superpower                     # Superpowers 分组
 
 [`SKILL_SOURCES`](scripts/upgrade-skill.mjs) 使用 `{ skill, repo, path, ref, groups }`。`ref` 是要下载的分支；当前每个技能都是 `main`。帮助展示 `<repo>/tree/<ref>/<path>`。下载直接读取 `repo`、`path` 和 `ref`，并按仓库和 ref 合并所选路径。报告器使用配置中的 `repo`。
 
+[`RULE_SOURCES`](scripts/upgrade-rule.mjs) 使用 `{ rule, repo, path, ref, groups }`，下载方式与技能相同。`npm run upgrade:rule` 把所选规则写入 `rules/<name>/`。下载和报告由 [`common-download.mjs`](scripts/common-download.mjs) 与 [`common-report.mjs`](scripts/common-report.mjs) 共用。`RULE_SOURCES` 为空时，命令因没有可选规则而退出，且不创建 `rules/`。规则的 `path` 必须是目录，不要求 `SKILL.md`，也不删除 `superpowers:`。
+
 ```text
 所选技能 → 按仓库 + ref 分组
            ├─ --git（默认）：一次浅克隆 + 稀疏检出
@@ -86,7 +89,7 @@ npm run upgrade:skill -- --superpower                     # Superpowers 分组
 
 ```bash
 node --test scripts/deploy.test.mjs
-node --test scripts/upgrade-skill.test.mjs
+node --test scripts/upgrade-skill.test.mjs scripts/upgrade-rule.test.mjs
 ```
 
 测试使用临时项目；升级测试采用离线归档和本地 Git 仓库。修改部署行为后，还需用 `npm run deploy:project "<临时项目>"` 实测已有内容保护和重复执行。`skills/**/test-prompts.json` 是 Git 忽略的本地行为场景清单，不是自动测试运行器。各技能的回归要求见 [AGENTS.md](AGENTS.md)。
@@ -169,8 +172,10 @@ node --test scripts/upgrade-skill.test.mjs
 | `package.json`                              | 对外展示信息与 npm 脚本的单一来源                         |
 | `scripts/build.mjs`                         | 将 `package.json` 同步到各插件 JSON                      |
 | `scripts/deploy.mjs`                        | 将 `commands/`、`rules/`、`skills/` 符号链接到 harness 目录 |
-| `scripts/upgrade-skill.mjs`                 | 默认通过 Git，也可通过 `--fetch` 归档同步上游技能         |
-| `scripts/upgrade-skill-reporter.mjs`        | 并行升级时的终端/CI 输出报告器                           |
+| `scripts/upgrade-skill.mjs`                 | 通过共用下载器同步上游技能                               |
+| `scripts/upgrade-rule.mjs`                  | 将 `RULE_SOURCES` 同步到 `rules/<name>/`                  |
+| `scripts/common-download.mjs`               | 共用的 Git/`--fetch` 下载、镜像替换和 CLI 辅助函数       |
+| `scripts/common-report.mjs`                 | 技能与规则并行升级时的终端/CI 输出报告器                 |
 | `commands/`                                 | 可选的斜杠命令模板（当前不存在）                          |
 | `rules/`                                    | 可选的代理规则（当前不存在）                              |
 | `skills/`                                   | 仓库跟踪的技能与 Git 忽略的上游镜像                       |

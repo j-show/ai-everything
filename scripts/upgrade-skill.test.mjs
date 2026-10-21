@@ -313,7 +313,7 @@ for (const transportFlag of [undefined, '--fetch', '--git']) {
     const projectRoot = fileURLToPath(new URL('../', import.meta.url));
     try {
       await fs.promises.mkdir(path.join(root, 'scripts'));
-      for (const name of ['upgrade-skill.mjs', 'upgrade-skill-reporter.mjs']) {
+      for (const name of ['upgrade-skill.mjs', 'common-download.mjs', 'common-report.mjs']) {
         await fs.promises.copyFile(path.join(projectRoot, 'scripts', name), path.join(root, 'scripts', name));
       }
       await fs.promises.symlink(path.join(projectRoot, 'node_modules'), path.join(root, 'node_modules'),
@@ -613,13 +613,13 @@ test('--fetch and --git are mutually exclusive regardless of order', () => {
 test('git and help do not load tar; fetch reports a missing tar package', async () => {
   const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'upgrade-no-tar-'));
   const scriptsDir = path.join(root, 'scripts');
-  const scriptUrl = new URL('./upgrade-skill.mjs', import.meta.url);
   await fs.promises.mkdir(scriptsDir);
-  await fs.promises.copyFile(fileURLToPath(scriptUrl), path.join(scriptsDir, 'upgrade-skill.mjs'));
-  await fs.promises.copyFile(
-    fileURLToPath(new URL('./upgrade-skill-reporter.mjs', import.meta.url)),
-    path.join(scriptsDir, 'upgrade-skill-reporter.mjs'),
-  );
+  for (const name of ['upgrade-skill.mjs', 'common-download.mjs', 'common-report.mjs']) {
+    await fs.promises.copyFile(
+      fileURLToPath(new URL(`./${name}`, import.meta.url)),
+      path.join(scriptsDir, name),
+    );
+  }
   await fs.promises.writeFile(path.join(root, 'hide-tar-hook.mjs'), `
     export async function resolve(specifier, context, nextResolve) {
       if (specifier === 'tar') {
@@ -768,7 +768,7 @@ test('shared download session materializes under a repository-named work dir', a
 });
 
 test('TTY reporter keeps every finished file detail even when many skills squeeze the live window', async () => {
-  const { createUpgradeReporter } = await import('./upgrade-skill-reporter.mjs');
+  const { createUpgradeReporter } = await import('./common-report.mjs');
   let output = '';
   const stream = {
     isTTY: true,

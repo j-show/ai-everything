@@ -9,7 +9,7 @@
 ## Requirements
 
 - [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/*.mjs` use `import` and modern `fs` APIs)
-- Skill upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
+- Skill and rule upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
 - Default `--git` upgrades do not load `tar`. `--fetch` loads that development dependency only when extracting an archive; install it with `npm install --ignore-scripts` before using `--fetch`. Build and deploy scripts use only Node standard libraries. A regular install also runs `prepare` → `init:darwin` (`npx skills add alchaincyf/darwin-skill`); use `npm run init:darwin` separately when that skill is wanted.
 - **Deploy on Windows**: Git Bash or another `bash` on `PATH` is only needed for hook scripts, not for `npm run deploy`
 
@@ -29,6 +29,7 @@
 | `npm run deploy:qcode` | `npm run deploy -- -t qcode` |
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
 | `npm run upgrade:skill` | `node scripts/upgrade-skill.mjs` |
+| `npm run upgrade:rule` | `node scripts/upgrade-rule.mjs` |
 | `npm run upgrade:design` | `node scripts/upgrade-skill.mjs --design` |
 | `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
 
@@ -68,6 +69,8 @@ When multiple skills run concurrently, interactive terminals show an independent
 
 [`SKILL_SOURCES`](scripts/upgrade-skill.mjs) defines `{ skill, repo, path, ref, groups }`. `ref` is the branch to download; every configured skill currently uses `main`. Help displays `<repo>/tree/<ref>/<path>`. Downloads read `repo`, `path`, and `ref` directly and group selected paths by repository and ref. The reporter uses the configured `repo`.
 
+[`RULE_SOURCES`](scripts/upgrade-rule.mjs) defines `{ rule, repo, path, ref, groups }` and uses the same transports. `npm run upgrade:rule` writes each selected rule to `rules/<name>/`. Download and reporting are shared by [`common-download.mjs`](scripts/common-download.mjs) and [`common-report.mjs`](scripts/common-report.mjs). The rule catalog is empty until entries are added; an empty catalog exits because no rules are selected, and does not create `rules/`. A rule path must be a directory. Rules do not require `SKILL.md` and do not strip `superpowers:`.
+
 ```text
 selected skills → group by repository + ref
                   ├─ --git (default): one shallow clone + sparse checkout
@@ -86,7 +89,7 @@ Run from the repository root:
 
 ```bash
 node --test scripts/deploy.test.mjs
-node --test scripts/upgrade-skill.test.mjs
+node --test scripts/upgrade-skill.test.mjs scripts/upgrade-rule.test.mjs
 ```
 
 These suites use temporary projects; upgrade tests use offline archives and local Git repositories. After deployment changes, also exercise `npm run deploy:project "<temporary project>"` for existing-content protection and repeat runs. Skill behavior scenarios in `skills/**/test-prompts.json` are local, Git-ignored inventories, not automated test runners. See [AGENTS.md](AGENTS.md) for scoped regression requirements.
@@ -169,8 +172,10 @@ The generator extracts each task step's inputs, decisions, actions, outputs, acc
 | `package.json`                              | Single source of truth for published metadata and npm scripts |
 | `scripts/build.mjs`                         | Syncs `package.json` into plugin JSON files                  |
 | `scripts/deploy.mjs`                        | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
-| `scripts/upgrade-skill.mjs`                 | Syncs upstream skills via Git (default) or `--fetch` archives |
-| `scripts/upgrade-skill-reporter.mjs`        | Terminal/CI reporter for parallel skill upgrades             |
+| `scripts/upgrade-skill.mjs`                 | Syncs upstream skills via the shared downloader               |
+| `scripts/upgrade-rule.mjs`                  | Syncs `RULE_SOURCES` into `rules/<name>/`                     |
+| `scripts/common-download.mjs`               | Shared Git/`--fetch` download, mirror swap, and CLI helpers  |
+| `scripts/common-report.mjs`                 | Terminal/CI reporter for parallel skill and rule upgrades    |
 | `commands/`                                 | Optional slash-command templates (currently absent)          |
 | `rules/`                                    | Optional agent rules (currently absent)                      |
 | `skills/`                                   | Tracked skills and Git-ignored upstream mirrors              |
