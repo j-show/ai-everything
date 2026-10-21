@@ -1,6 +1,7 @@
 ---
 name: designer
-description: "Orchestrate ui-ux-pro-max + frontend-design for distinctive UI. Writes SSOT brief to designs/specs, generates preview mockups in designs/previews with prompt docs in designs/images, then implements with a11y guardrails. Use when user asks to design, redesign, build UI, landing page, dashboard, component, design system, visual direction, typography, mockup, or prototype. Actions: design, redesign, build UI, create landing page, style guide, design preview, UI prototype. Triggers: 'designer', 'frontend design', 'UI design', '设计页面', '做落地页', '设计系统', '视觉方向', '去模板化', 'design brief', 'UI prototype', '设计图'. Requires installed ui-ux-pro-max and frontend-design skills."
+description: "Orchestrate ui-ux-pro-max + frontend-design for distinctive UI."
+disable-model-invocation: true
 ---
 
 # Designer

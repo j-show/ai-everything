@@ -1,100 +1,60 @@
 # Report Format
 
-Load at Step 1.
+Load at Step 1. Findings and summaries are Chinese; paths are repo-relative with forward slashes. Keep suggestions short, without large code blocks.
 
-## Language and tone
+## Evidence and priority
 
-- Findings and summary: **Chinese**
-- Paths: repo-relative, forward slashes
-- Suggestions: short, actionable — **no pasted code blocks** (one-line fix hint is enough)
+Report actionable defects supported by the selected diff, contract, caller or reproduction. State the triggering conditions and concrete impact. Uncertain assumptions belong in open questions, not confirmed findings.
 
-## Priority levels
+| Priority | Meaning |
+| --- | --- |
+| P0 | Critical, broadly applicable failure such as severe security exposure or data loss requiring immediate action |
+| P1 | High-impact defect that should be fixed before delivery |
+| P2 | Material defect with a narrower impact |
+| P3 | Low-impact but concrete issue worth correcting |
 
-| Level | Meaning | Loop A action |
-| ----- | ------- | ------------- |
-| P0 | Critical — correctness, security, data loss, broken contract | Must fix before done |
-| P1 | High — should fix before delivery | Must fix before done |
-| P2 | Medium — follow-up worthy | Fix in Loop A unless user asked report-only |
-| P3 | Low — optional polish | Fix in Loop A unless user asked report-only |
+Do not grade every contract violation P0 or report naming preferences as defects. Priority does not override read-only mode or authorize wider edits.
 
-Do not inflate severity. A naming nit is P3, not P1.
-
-## Categories (pick one per finding)
-
-`正确性` · `安全` · `性能` · `可读性` · `可维护性` · `测试`
-
-## Single finding template
+Categories: `正确性` · `安全` · `性能` · `可读性` · `可维护性` · `测试`.
 
 ```markdown
-### P{n} · {category} · `{relative-path}:{start}-{end}`
+### P{n} · {category} · `{path}:{start}-{end}` · {reviewed version/layer}
 
-**问题**：{what is wrong, one or two sentences}
+**问题**：{trigger, concrete impact and supporting evidence}
 
-**建议**：{concrete next step — no large code paste}
+**建议**：{specific next step}
 ```
 
-Line range rules:
+Use the smallest relevant **real** line range in the reviewed version:
 
-- Use start–end on the **current** file (`42-48`); single line `42-42`
-- If the issue is file-level (missing test file), use `{path}:1-1` and say "全文件/缺文件" in 问题
+- Committed or staged review: use that snapshot's lines, not shifted worktree lines.
+- Deleted lines/files: use the old path and old version, labelled `删除前 <sha>`; do not invent a new-file location.
+- Missing file/test: cite the changed caller or implementation that requires it, or give a path-level finding explicitly without a line number. Never invent `missing-file:1-1`.
+- After fixes: label current worktree locations; retain original locations in resolved history.
 
-## Report document structure
+## Saving and report structure
 
-Save a copy under `.review/{timestamp}.md` (e.g. `20260804143022.md` — audit time, no spaces).
+Default destination: `.review/{timestamp}.md` under the project root. An explicit destination takes precedence. Use the current audit time and a unique suffix if needed; never overwrite existing reports unintentionally.
+
+“Only review / do not fix code” disables code repair. “Do not write files” additionally disables saving a report; provide it only in the response. Do not ask again when the user already stated the mode.
 
 ```markdown
 # 代码审查报告
 
-- **范围**：{scope mode + baseline description}
-- **时间**：{ISO or local audit time}
-- **分支**：{branch name}
-- **暂存区**：{included / excluded}
-
-## 摘要
-
-| 级别 | 数量 |
-| ---- | ---- |
-| P0   | n    |
-| P1   | n    |
-| P2   | n    |
-| P3   | n    |
+- 范围：{mode, paths, baseline IDs and reviewed layers}
+- 时间：{actual audit time}
+- 报告模式：{review-only / review-and-fix}
 
 ## 发现
+{P0–P3 findings, highest first; or 范围内未发现可确认的问题}
 
-{P0 items first, then P1, P2, P3 — each using the single-finding template}
+## 修复与剩余项
+{resolved findings, unresolved defects, questions; omit in review-only mode if redundant}
 
-## 备注
-
-{optional: deferred items, generated/vendor paths, scope limits}
+## 验证
+{command, cwd, snapshot identity, actual exit status, coverage, failure/blocker/not-run reason; temporary-resource cleanup state when used}
 ```
 
-## Empty report
+An empty findings section means no confirmed defects were found within the stated scope. It does not mean unexecuted tests passed.
 
-When no P0–P3 items remain after a review pass, Step 1 output should state clearly:
-
-```markdown
-## 发现
-
-无待修复项（范围内未发现 P0–P3 问题）。
-```
-
-Still save the report file when the user expects audit history; otherwise a minimal `.review/{timestamp}.md` with 摘要 all zero is acceptable.
-
-## Review lens (senior reviewer)
-
-Check in-scope diff for:
-
-| Lens | Examples |
-| ---- | -------- |
-| Correctness | Wrong logic, edge cases, error handling, race conditions |
-| Security | Injection, authz, secrets, unsafe defaults |
-| Performance | Obvious N+1, hot-path waste (only when material) |
-| Readability | Confusing control flow, misleading names in changed code |
-
-Do not file style-only nits on lockfiles. Do not file issues outside the resolved diff scope.
-
-## Loop A coupling
-
-- Each report round lists **current** findings for the **same scope**
-- After Step 2 fixes, re-run Step 1 until 无待修复项
-- Resolved items should not reappear; new regressions from fixes must be filed
+Re-review after every repair, including verification-driven repairs. Record the resulting worktree state without relabelling an unchanged staged snapshot as fixed. The final report must distinguish resolved defects, remaining defects and validation gaps. New reports are allowed on a repeat run; needless code/test rewrites are not.

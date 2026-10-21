@@ -1,12 +1,63 @@
-# 仓库操作约定
+# AI Everything — 仓库操作约定
 
-- 修改代码或脚本时，同步更新 README.md、README_CN.md 和本文件，删除冗余说明。
-- 未经用户指定，不创建分支；只有用户要求提交时才创建 commit。
-- 修改技能时同步核对其现有 references，避免主流程与细则冲突；doc-helper 的回归场景覆盖单文件注释、局部英文 README、第三方文档工具不可用及重复执行不产生改动。
-- 修改 agent-creator 时同步核对本地 test-prompts.json（Git 忽略）：必须调用已安装的 grilling；产物位于目标项目的 `.agents/skills/agent-<name>/`，配套脚本默认位于项目根 `scripts/`。回归覆盖命名、依赖缺失、增量更新、任务步骤间的数据传递与失败阻断、既有确认复用及隔离验证；创建 Agent 不授权执行其真实业务任务。
-- 部署入口为 `scripts/deploy.mjs`；复用现有链接与冲突保护逻辑。
-- `pnpm deploy:project <project dir>` 默认采用通用模式（等价于 `--general`），部署到 `<project dir>/.agents/` 下的 `skills/`、`commands/`、`rules/`；`--custom` 直接部署到项目目录下。两种参数互斥，可放在路径前后；缺失的源目录跳过。
-- 保留 `deploy --type ... --mode user|local` 的现有路径约定；Codex harness 部署仅包含 skills。
-- 修改部署行为后运行 `node --test scripts/deploy.test.mjs`，并用临时目录实测 pnpm 入口。
-- 验证部署不得写入真实用户 harness 目录；临时目录中应覆盖已有内容保护和重复运行。
-- 升级源 `SKILL_SOURCES` 使用 `{ skill, repo, path, groups }`，展示 URL 为 `<repo>/tree/main/<path>`；默认或显式 `--git` 使用本机 Git 浅层稀疏检出；显式 `--fetch` 使用内置 `fetch` 下载分支 `.tar.gz` 并用开发依赖 `tar` 提取；`--fetch` 与 `--git` 互斥。两者仅下载器不同，复用 staging、镜像替换、回滚、报告与清理；禁止调用 GitHub API，不自动切换下载器。报告器使用配置的 `repo` 字段。回归覆盖参数组合、两种完整 CLI、Git 失败保留原内容；使用临时目录、离线归档及本地 Git 仓库验证。修改后运行 `node --test scripts/upgrade-skill.test.mjs`；联网验证仅写临时目录。
+面向编码代理的技能与插件资源仓库。维护脚本使用 Node.js 22+ ES modules。安装、脚本表和技能概览见 [README_CN.md](README_CN.md) / [README.md](README.md)。
+
+## 事实来源
+
+```text
+package.json ── scripts/build.mjs ── .{cursor,codex,claude}-plugin/
+skills/      ── scripts/deploy.mjs ── harness 或项目目录的资源链接
+上游仓库     ── scripts/upgrade-skill.mjs ── skills/ 中的镜像
+hooks/       ── SessionStart 配置与启动脚本
+```
+
+- 元数据与脚本入口以 [package.json](package.json) 为准。升级来源、分组和路径以 [SKILL_SOURCES](scripts/upgrade-skill.mjs) 为准。
+- 技能契约以 `skills/<name>/SKILL.md` 及其 `references/` 为准。
+- 自有技能随仓库维护。`.gitignore` 忽略 14 个上游镜像，以及 `.agents/`、`.review/`、`skills/**/test-prompts.json`。不能假设全新检出里有这些路径。
+- `commands/`、`rules/` 和 `skills/using-ai-everything/SKILL.md` 当前缺失。部署跳过缺失资源。SessionStart 读不到该技能时输出错误回退文本。
+
+## 易错入口
+
+从仓库根目录执行。
+
+- 只装脚本依赖时用 `npm install --ignore-scripts`。不加该参数会执行 `prepare` → `init:darwin`。
+- `npm run deploy` 在缺少 `-t` 时以退出码 1 结束，不创建链接。
+- `-t agent` 默认写入 `~/.agents/`（例如 `~/.agents/skills`）。`--mode local` 写入当前目录的同名隐藏目录。`-t project <project dir>` 把现有 `skills/`、`commands/`、`rules/` 直接链到该项目目录。Codex 只链 `skills/`。
+- `npm run build` 在单个清单写入失败后仍继续。完成时除退出码外，还要看 `Failed to update` 日志和实际清单差异。
+- `skills/**/test-prompts.json` 是场景清单，不是测试运行器。清单存在不等于已验证。
+- 仓库里有技能文件，不等于当前会话已安装该入口。依赖缺失时核对会话可调用的技能。
+
+## 边界
+
+### 每次都做
+
+- 以当前文件和调用链核对前提、逻辑和缺口。
+- 修改代码或脚本时同步更新 README.md、README_CN.md，以及本文件或下表中受影响的任务文档。保留仍然有效的约束。
+- 编辑前看工作区和暂存区，保留用户已有改动。改技能时核对其现有 references。
+- 报告里分开写已执行、未执行和环境阻塞。
+
+### 先确认
+
+- 只在缺少必要授权时提问。本轮和此前会话已经明确的范围直接沿用。
+- 创建分支要由用户指定。创建 commit 要由用户要求。
+- 扩大任务范围，或全文替换某份受保护文档，要有针对该文档的授权。局部更新不能推出全文替换。
+
+### 硬边界
+
+- 保留用户的暂存内容和后续编辑。本仓库不做测试提交。
+- 部署和联网升级的验证只写临时目录，不写入真实用户 harness。
+- 只有实际跑过的检查才能写成通过。快照外的工作区结果、零测试、环境阻塞和未执行的恢复场景保持为未验证。
+
+## 按任务阅读
+
+| 何时阅读 | 文档 | 用途 |
+| --- | --- | --- |
+| 修改部署路径、链接去重或部署验证 | [部署](docs/agents/deploy.md) | 目标目录和隔离验证 |
+| 修改升级来源、分组、下载方式或报告 | [升级器](docs/agents/upgrade-skill.md) | 下载、失败保留和回归 |
+| 修改 `skills/` 下自有技能 | [技能回归](docs/agents/skill-regression.md) | 该技能的场景和禁止降级 |
+
+## 完成
+
+- 本轮 diff 只覆盖授权范围。README 两种语言里的同一命令保持一致。本文件不超过 200 行。
+- 改动对应的验证已经执行，或明确写成未执行。不为核对文档标题而运行真实部署、联网升级或依赖安装。
+- 报告实际结果和遗留问题。用户未要求时不创建分支、不提交。

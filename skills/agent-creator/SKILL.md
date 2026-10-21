@@ -1,6 +1,7 @@
 ---
 name: agent-creator
-description: "Create, build, rewrite, or incrementally update a project's task-executing Agent skill. Turn requirements and project evidence into an actionable workflow, dependencies, supporting tools, and acceptance checks. Use for 'create an agent', 'build a project agent', 'update an agent skill', '创建项目 Agent', '生成任务助手', or '重写 Agent'. Requires separately installed grilling. Not for generating AGENTS.md, running an existing Agent, or building an Agent application."
+description: "Create, build, rewrite, or incrementally update a project's task-executing Agent skill."
+disable-model-invocation: true
 ---
 
 # Agent Creator

@@ -1,103 +1,68 @@
 ---
 name: review-helper
-description: "Code review, report, and fix loop for changed code only. Produces Chinese P0-P3 findings with file:line ranges, applies fixes, runs pnpm check/test until pass. Scope: all branch, unpushed vs origin, or commit hash plus staging. Use when user wants code review, audit changes, fix review findings, invoke review-helper, PR review, or review before commit. Triggers: 'review', 'review-helper', 'code review', '审查', '代码审查', 'review code', 'audit', 'PR review', '检查改动', '修复审查问题'."
+description: "Review scoped code changes, report evidence-backed P0-P3 findings in Chinese, and fix within the requested mode. Resolves branch, commit, staged and working-tree scope; verifies relevant behavior and reports blocked checks honestly. Use for code review, PR review, review before commit, audit changes, or fixing review findings. Triggers: 'review-helper', 'review', 'code review', '审查', '代码审查', '检查改动', '修复审查问题'."
 ---
 
 # Review Helper
 
-IRON LAW: Review and fix **only the in-scope diff** — do not wander into unrelated files or speculative refactors. Report findings in Chinese with relative path + line range; suggestions must be short and actionable, not pasted code blocks.
+只审查约定范围；读取调用链用于判断影响，不扩展修改范围。用户明确要求优先于默认流程。
 
-## Workflow
-
-Copy this checklist and track the outer loop:
-
-```
-Review Helper Progress:
-
-- [ ] Step 0: Scope ⚠️ REQUIRED
-  - [ ] Load references/scope-and-diff.md
-  - [ ] Resolve diff from user input + staging area
-- [ ] Loop A: Report → Fix (repeat until report empty)
-  - [ ] Step 1: Review report ⚠️ REQUIRED
-  - [ ] Step 2: Apply fixes for each finding
-- [ ] Loop B: Verify → Fix (repeat until pass)
-  - [ ] Step 3: Run verification commands ⚠️ REQUIRED
-  - [ ] Step 4: Fix verification failures (if any) → retry Step 3
-- [ ] Step 5: Self-check
+```text
+锁定模式、范围和版本 → 审查并报告
+  ├─ 仅审查 → 汇报发现与验证限制
+  └─ 修复模式 → 最小修复 → 复审 → 相关验证
+                               ↑      │
+                               └─ 范围内缺陷
+                         阻塞/无进展 → 汇报剩余项
 ```
 
-**Control flow** (same as `commands/review.md`):
+## 0. 锁定任务
 
-1. Repeat **Step 1 → Step 2** until Step 1 produces **no remaining fix items**.
-2. Run **Step 3**; if pass → done.
-3. Else **Step 4** → retry **Step 3** until pass.
+读取 [scope-and-diff.md](references/scope-and-diff.md)，先检查工作区、暂存区和基线。
 
-## Step 0: Scope ⚠️ REQUIRED
+- **模式**：默认审查并修复；“仅审查/只报告/不改代码”进入仅审查模式，禁止修复代码。用户禁止写文件时只在回复中报告。
+- **范围**：按 reference 解析 `all`、`self`、提交或路径；明确说明基线、版本层、文件数和排除项。用户限定路径同时约束暂存改动，不把其他包自动纳入。
+- **保存**：默认将中文报告写入 `.review/{timestamp}.md`；遵守指定目的地和禁止写文件的要求。
+- **保护**：记录已有修改及暂存条目；修改前复核当前内容，按最小补丁保留用户工作。默认不暂存、不提交、不建分支。
 
-Load `references/scope-and-diff.md`.
+🔴 CHECKPOINT：基线无法确定、修复目标版本不明确、修复需要越界或与用户修改冲突时，只暂停依赖该决定的部分并询问；继续独立可做的审查。已明确的范围和授权不重复确认。
 
-Combine user `{{input}}` with **staged changes** when determining what to review.
+## 1. 审查与报告
 
-| Input | Review scope |
-| ----- | -------------- |
-| `all` | All code in the current project |
-| `self` | All code on the current branch |
-| _(empty)_ | Local commits not on `origin` + staged files |
-| commit hash | That commit’s changes + staged files |
-| other path/ref | Interpret per user intent; still include staging unless user excludes it |
+读取 [report-format.md](references/report-format.md)。检查正确性、安全、实质性能问题及可维护性；每项提供触发条件、影响、证据和简短建议。
 
-Ask if scope is ambiguous before a large `all` review.
+- 差异审查只报告由范围内变更引入或暴露的可证实问题；`all` 按已授权的完整代码范围审查。
+- 使用被审查版本的真实路径与行号；删除行注明旧版本，禁止给不存在的文件编造 `1-1`。
+- 排除锁文件发现；区分缺陷、待确认假设和环境限制，不为凑条目提出纯偏好改写。
+- 报告后，仅审查模式执行允许的只读验证并交付；修复模式进入下一步。
 
-## Step 1: Review report ⚠️ REQUIRED
+## 2. 修复与复审
 
-Load `references/report-format.md`.
+只修复有证据且在授权范围内的发现。相关测试用于验证契约，不能把错误实现改成正确预期。
 
-Act as a senior reviewer (correctness, performance, security, readability). Output **in Chinese**. Grade and format each finding; save a copy under `.review/{audit-time}.md` (timestamp filename).
+每次修复后，检查实际补丁并复审受影响行为，再运行验证。初始审查版本保持可追溯，复审以修复后的工作区为准；未更新的暂存快照不代表修复无效，也不得声称暂存区已修复。
 
-Ignore lockfiles: `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`, `bun.lockb`.
+同一问题重试没有新证据或进展时停止该项，列出未解决原因；不以“报告为空”为由无限重构。重复执行不重写已经正确的代码或测试。
 
-Do not report issues outside the resolved diff scope.
+## 3. 验证与交付
 
-## Step 2: Fix findings
+读取 [verification-commands.md](references/verification-commands.md)。检查实际脚本内容、项目要求及前置步骤，选择覆盖相关行为的最小验证集合；语法或类型检查通过不替代行为测试。
 
-For **each** item from the latest Step 1 report, implement the suggested fix in code.
+审查快照与工作区不同时，按 reference 隔离完整执行上下文；无法构造或缺少依赖就报告未验证。隔离运行无论成功或失败，只清理本轮创建的临时资源，不改原 index、工作区或外部配置。
 
-After fixes, return to Step 1 and re-review the **same scope** until no new P0–P3 items remain.
+范围内缺陷修复后回到步骤 2 复审，再重跑受影响验证。环境缺失、无关失败或无测试入口时继续独立验证，分别报告通过、失败、阻塞和未执行；接受限制不等于测试通过。
 
-⚠️ Do not skip Step 1 between fix rounds — confirm the diff is clean of reported issues.
+交付时核对：
 
-## Step 3: Verify ⚠️ REQUIRED
+- 模式、比较版本及路径范围一致；原暂存条目和无关用户修改保留。
+- 报告列明发现、已修复及剩余项；仅按允许的方式保存。
+- 列出实际验证命令、工作目录、各进程退出状态及覆盖范围；未运行或零测试不算通过。
+- 完成修改后已复审；仍有缺陷或验证缺口时明确标记，不宣称全部通过。
 
-Load `references/verification-commands.md`.
+## 禁止事项
 
-Run the first available command in project order; success → end Loop B.
-
-## Step 4: Fix verification failures
-
-Load `references/verification-commands.md` (failure handling).
-
-Fix causes of Step 3 failure, then **retry Step 3** only (do not skip verification).
-
-## Step 5: Self-check
-
-Run the pre-delivery checklist below.
-
-## Anti-Patterns
-
-- Reviewing files outside the resolved scope
-- Vague findings without `file:start-end` location
-- Pasting large code blocks instead of actionable suggestions
-- Declaring done while Loop A still has open P0/P1 items
-- Declaring done while Step 3 commands fail
-- Reporting style-only nits on lockfiles (ignored by rule)
-- Drive-by refactors unrelated to findings
-
-## Pre-Delivery Checklist
-
-- [ ] Scope matches user input + staging rules
-- [ ] Lockfiles excluded from findings
-- [ ] Report uses P0–P3 template in Chinese
-- [ ] Copy saved to `.review/{timestamp}.md`
-- [ ] Loop A completed (re-review after fixes shows no pending items)
-- [ ] Loop B completed (verification command passed or none defined)
-- [ ] No out-of-scope files modified
+- 把远端同名功能分支当成 `self` 的目标分支，漏掉已推送改动。
+- 忽略只读要求、覆盖用户修改、擅自扩大路径或修改原 index。
+- 只跑首个可用检查就结束，或用复合命令最后一个成功状态掩盖测试失败。
+- 为消除失败而削弱有效断言、跳过用例、静默安装依赖或反复重试未变化的环境。
+- 未经授权 reset、stash、checkout 恢复文件；对生成物或第三方文件直接手改。

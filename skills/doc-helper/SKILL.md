@@ -108,7 +108,7 @@ Stop when the requested facts are accurate: a repeat run on unchanged inputs sho
 
 ### JSDoc & comments
 - [ ] JSDoc matches branches, optional params, and nullability
-- [ ] `@param` / `@returns` / `@throws` where applicable; interface properties documented
+- [ ] Parameters, returns, and escaping errors match implementation; distinguish throws, rejections, and caught-error fallbacks per `references/jsdoc-conventions.md`; interface properties documented
 - [ ] No speculative wording; non-trivial anonymous functions have leading body comments
 - [ ] No false unimplemented API descriptions
 

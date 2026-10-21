@@ -1,75 +1,66 @@
 # Verification Commands
 
-Load at Step 3 and Step 4.
+Load at Step 3. Verification follows the selected review version and authorized mode.
 
-## Pick one project command
+## Choose by coverage, not script name
 
-Discover scripts from `package.json`, `Makefile`, CI config, or README. Run the **first script that exists** in this order:
+1. Read repository instructions, CI, README and actual script definitions. Identify the package manager from project configuration, not the skill description.
+2. List required checks and the behavior affected by the findings. Choose the smallest command set that covers both. An aggregate command that already covers them needs no redundant second run.
+3. Inspect `check:all`, `check`, `test:all`, `test` as candidates, not an early-exit order. A syntax/lint/type-only check does not replace a relevant behavior test.
+4. Scope to a package or file only when supported. Preserve working directory, environment setup, build steps, fixtures, runner options and lifecycle hooks. Do not append filters to a fixed glob assuming they narrow it.
 
-| Priority | Script name (examples) |
-| -------- | ---------------------- |
-| 1 | `check:all` |
-| 2 | `check` |
-| 3 | `test:all` |
-| 4 | `test` |
+Examples, only when supported by the project:
 
-Tooling equivalents:
+| Project | Scoped behavior verification |
+| --- | --- |
+| Node built-in tests | `node --test tests/cart.test.mjs` |
+| pnpm workspace | Package script via `pnpm --filter <package> run <script>` |
+| Python | Project's configured runner for `tests/<area>` |
+| Go | `go test ./path/to/package/...` |
 
-| Ecosystem | Fallback when no `check` |
-| --------- | ------------------------ |
-| pnpm | `pnpm run check:all` → … → `pnpm test` |
-| npm | `npm run check:all` → … → `npm test` |
-| Python | `pytest`, `ruff check`, `mypy` per project docs |
-| Go | `go test ./...`, `golangci-lint run` |
+Read-only mode does not authorize formatters, snapshots updates, auto-fixes or other commands that modify project files. Prefer non-mutating checks; if no safe equivalent exists, report that check as not run.
 
-Success on the first available command ends Loop B. Do not chain multiple top-level scripts unless the project README explicitly requires it.
+Do not install dependencies or contact services without authorization. When installation is forbidden and a package-manager wrapper can auto-install/bootstrap, use an already installed runner only if the inspected script and its prerequisites are preserved. Otherwise mark that check blocked. If unexpected generated files appear, stop that command path, inspect what changed, and remove only proven task-created disposable outputs within the test/workspace boundary; preserve pre-existing files and disclose the side effect.
 
-## Scope the run when possible
+## When the reviewed snapshot differs from the worktree
 
-| Diff scope | Prefer |
-| ---------- | ------ |
-| Single package/dir | Package or directory target (`pnpm --filter`, `pytest path/`) |
-| Few files | File-scoped test runner flags |
-| Wide / `all` | Full `check` or `test` script |
+Use a fresh task-owned temporary directory outside the source tree. Keep repository instructions in force there. A ban on **all** filesystem writes also forbids materializing a snapshot; use an allowed complete in-memory probe or report it unverified. Do not run formatters/builds against the original tree, switch branches, stash user work or replace the original index to obtain a snapshot.
 
-Match verification breadth to review scope when the project supports it.
+1. Pin the commit SHA, or record `git ls-files --stage` for an index review. Read the snapshot's entry points, imports, package configuration, tests and setup/build steps. Copying only a changed function or file is not equivalent execution.
+2. Materialize the full tracked snapshot, then scope the **commands**, not the dependency graph:
+   - Commit: export the pinned tree with `git archive <sha>` and extract inside the fresh directory using available tooling.
+   - Index: `git checkout-index --all --prefix=<absolute-temp-dir>/` reads the existing index into that directory; do not add `-u`, edit the index or overlay worktree files. Capture its exit code and recheck index entries. An unmerged index, missing blob or changed index invalidates the snapshot: discard only the task-owned output and report that validation blocked.
+   - Verify required paths and contents against `git ls-tree -r <sha>` / pinned blobs, or the recorded index entries. Archive attributes (`export-ignore`, `export-subst`) and checkout filters can omit or transform files; a successful export is not proof of equivalent inputs. Restore ordinary files from the selected blobs with byte-preserving file APIs when sufficient. If required inputs remain unavailable (including submodule/LFS content), mark blocked; never substitute worktree files.
+3. Run from the snapshot's correct package directory with its actual test/configuration files and prerequisites. Use existing authorized tooling; do not link mutable source dependencies/caches, import modules from the original checkout, copy credentials, install packages or attach real services to fill gaps without authorization. Missing ignored build inputs/dependencies are a stated blocker; they do not justify substituting current worktree files.
+4. Use per-process working directories and environment overrides; do not modify persistent machine/user configuration. If an execution API requires temporarily changing the caller process's directory or environment, restore its original value **and presence** in a `finally` path, including absent versus empty variables.
+5. On pass, test failure or setup error, record command exits and findings first. Then remove only the newly created directory after validating its resolved absolute boundary and ownership; never clean an existing user directory. Record cleanup failure separately, keep its path for recovery and continue independent review. Do not label a failed test or cleanup as passed.
 
-## Step 3 — run
+Where full export is unavailable, an in-memory probe is only sufficient if it executes the original snapshot modules and their complete dependency closure without rewriting logic; otherwise mark the snapshot unverified. Run independent checks that do not depend on the blocked snapshot. Report snapshot identity, execution directory, actual coverage and cleanup state.
 
-1. State which command you will run and why it was chosen.
-2. Run from repo root (or package root for monorepos).
-3. Record exit code and a short pass/fail summary for the user.
+## Execute and record
 
-If **no** check or test command exists, say so explicitly and end Loop B after documenting the gap — do not claim full verification.
+State the command, working directory, purpose and reviewed version. Capture **each test process's** actual exit code immediately; a later successful command must not replace it.
 
-## Step 4 — failure handling
+Record collected/passed/failed/skipped counts when available. Zero tests, missing runner, discovery failure or a skipped suite is not successful behavior verification, even if the wrapper exits zero. Investigate discovery within scope or report the gap.
 
-When Step 3 fails:
+In a committed/staged review, do not claim a test of a different worktree validated the reviewed snapshot. Follow the version rules in `scope-and-diff.md`.
 
-| Failure type | Action |
-| ------------ | ------ |
-| Lint/type error from your fix | Fix the code; retry Step 3 |
-| Test failed — caused by review fix | Fix implementation or test per project norms; retry Step 3 |
-| Test failed — pre-existing / unrelated | Report to user; do not mark Loop B done without acknowledgment |
-| Missing env (DB, API keys) | Document; retry only after env is available or user accepts skip |
-| Flaky test | Stabilize per project patterns; do not silence without root cause |
+## Handle results without losing scope
 
-Rules:
+| Result | Action |
+| --- | --- |
+| Confirmed in-scope defect | In repair mode fix the implementation, re-review the patch, then rerun affected checks; in review-only mode report it |
+| Obsolete test | Change it only with evidence of the intended contract and authorization for that file; never weaken a valid regression to fit a bug |
+| Pre-existing or unrelated failure | Preserve it, report separately, continue independent in-scope validation |
+| Missing environment, dependency or credentials | Mark blocked, do not repeat unchanged attempts; continue independent checks |
+| Flaky result | Record the failure; investigate within scope, and rerun only for a stated diagnostic reason; a later pass alone does not resolve it |
+| No command or zero tests | Report not verified; use an allowed focused probe if meaningful, without claiming equivalent suite coverage |
+| Repeated failure without progress | Stop that repair loop and report remaining evidence and the needed decision |
 
-- **Retry Step 3 only** after fixes — do not skip verification
-- Do not use `--no-verify` or skip hooks unless the user explicitly requests
-- Do not start Loop A again for verification-only failures unless the fix changes review scope materially
+After a code change, re-review even if it was prompted by a test failure. Rerun checks affected by that change; broaden only when new evidence justifies it.
 
-## Done criteria for Loop B
+## Completion statement
 
-- Chosen verification command **passed**, or
-- No command exists and the user accepted the documented gap, or
-- User explicitly accepted remaining failures with reason recorded
+List commands and outcomes as `通过 / 失败 / 阻塞 / 未执行`, with coverage and remaining defects. An executed integration test may exit 1 because of missing configuration: report both the actual failure and the environmental cause.
 
-## Report to user (end of Loop B)
-
-Include:
-
-1. Command(s) run
-2. Pass / fail
-3. If fail → what was fixed before pass, or what remains and why
+Work can be delivered with documented limits, but “all checks passed” requires all required checks to have actually passed with relevant coverage. User acceptance of a gap does not change a failed or unexecuted check into a pass.

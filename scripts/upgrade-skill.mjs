@@ -10,88 +10,125 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { t as listTar, x as extractTar } from 'tar';
 
 import { createUpgradeReporter } from './upgrade-skill-reporter.mjs';
+
+/** 提取归档时才加载 tar，未安装时 --git 与帮助仍可运行。 */
+const loadTar = async () => {
+  try {
+    return await import('tar');
+  } catch (error) {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
+      throw new Error('Missing tar package. Run npm install --ignore-scripts before --fetch.', { cause: error });
+    }
+    throw error;
+  }
+};
 
 //#region Constants
 
 /**
  * 可从上游更新的 skill 配置。
  *
- * `repo` 为仓库根 URL，`path` 为仓库内相对路径，统一使用 main 分支。
+ * `repo` 为仓库根 URL，`path` 为仓库内相对路径，`ref` 为要下载的分支。
  * `groups` 同时定义 CLI 分组选项，例如 `design` 对应 `--design`。
  */
 export const SKILL_SOURCES = [
   {
     skill: 'hatch-pet',
     repo: 'https://github.com/openai/skills',
+    ref: 'main',
     path: 'skills/.curated/hatch-pet',
     groups: ['pet'],
   },
   {
     skill: 'skill-forge',
     repo: 'https://github.com/sanyuan0704/sanyuan-skills',
+    ref: 'main',
     path: 'skills/skill-forge',
     groups: ['skill'],
   },
   {
     skill: 'grilling',
     repo: 'https://github.com/mattpocock/skills',
+    ref: 'main',
     path: 'skills/productivity/grilling',
-    groups: ['grilling'],
+    groups: ['mattpocock'],
   },
   {
     skill: 'domain-modeling',
     repo: 'https://github.com/mattpocock/skills',
+    ref: 'main',
     path: 'skills/engineering/domain-modeling',
-    groups: ['grilling'],
+    groups: ['mattpocock'],
+  },
+  {
+    skill: 'writing-for-agents',
+    repo: 'https://github.com/mattpocock/skills',
+    ref: 'main',
+    path: 'skills/productivity/writing-for-agents',
+    groups: ['mattpocock'],
   },
   {
     skill: 'frontend-design',
     repo: 'https://github.com/anthropics/skills',
+    ref: 'main',
     path: 'skills/frontend-design',
     groups: ['design'],
   },
   {
     skill: 'ui-ux-pro-max',
     repo: 'https://github.com/nextlevelbuilder/ui-ux-pro-max-skill',
+    ref: 'main',
     path: '.claude/skills/ui-ux-pro-max',
     groups: ['design'],
   },
   {
     skill: 'brainstorming',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/brainstorming',
+    groups: ['superpower'],
+  },
+  {
+    skill: 'writing-plans',
+    repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
+    path: 'skills/writing-plans',
     groups: ['superpower'],
   },
   {
     skill: 'test-driven-development',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/test-driven-development',
     groups: ['superpower'],
   },
   {
     skill: 'systematic-debugging',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/systematic-debugging',
     groups: ['superpower'],
   },
   {
     skill: 'requesting-code-review',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/requesting-code-review',
     groups: ['superpower'],
   },
   {
     skill: 'receiving-code-review',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/receiving-code-review',
     groups: ['superpower'],
   },
   {
     skill: 'verification-before-completion',
     repo: 'https://github.com/obra/superpowers',
+    ref: 'main',
     path: 'skills/verification-before-completion',
     groups: ['superpower'],
   }
@@ -102,9 +139,9 @@ export const SKILL_GROUPS = Object.freeze([
   ...new Set(SKILL_SOURCES.flatMap(({ groups }) => groups)),
 ]);
 
-/** 按统一 main 分支约定生成上游 skill 的完整 URL。 */
-const getSkillSourceUrl = ({ repo, path: remotePath }) =>
-  `${repo}/tree/main/${remotePath}`;
+/** 仅用于帮助文本：把配置展示成可打开的 GitHub tree 页面。 */
+const formatSkillTreeUrl = ({ repo, path: remotePath, ref }) =>
+  `${repo}/tree/${ref}/${remotePath}`;
 
 //#endregion
 
@@ -114,47 +151,39 @@ const projectRoot = path.resolve(path.dirname(modulePath), '..');
 const skillsRoot = path.join(projectRoot, 'skills');
 
 /**
- * 从 GitHub tree URL 解析仓库与下载路径参数。
+ * 把技能配置解析成下载参数。不经过 tree URL。
  *
- * URL 格式为：
- * `https://github.com/<owner>/<repo>/tree/<ref>/<remotePath>`。
- *
- * @param {string} value
- * @returns {{
- *   repositoryUrl: string,
- *   remotePath: string,
- *   ref: string,
- * }}
+ * @param {{ repo: string, path: string, ref: string }} source
+ * @returns {{ repositoryUrl: string, remotePath: string, ref: string }}
  */
-export const parseGitHubTreeUrl = (value) => {
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error(`Invalid GitHub skill URL: ${value}`);
+const resolveRepository = ({ repo, path: remotePath, ref }) => {
+  if (!repo || !remotePath || !ref) {
+    throw new Error('Skill source requires repo, path, and ref');
   }
 
-  const segments = parsed.pathname
-    .split('/')
-    .filter(Boolean)
-    .map((segment) => decodeURIComponent(segment));
-  const [owner, repo, tree, ref, ...remotePathParts] = segments;
+  let parsed;
+  try {
+    parsed = new URL(repo);
+  } catch {
+    throw new Error(`Invalid skill repository URL: ${repo}`);
+  }
 
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  const owner = segments[0];
+  const name = segments[1]?.replace(/\.git$/i, '');
   if (
     parsed.protocol !== 'https:' ||
     parsed.hostname !== 'github.com' ||
+    segments.length !== 2 ||
     !owner ||
-    !repo ||
-    tree !== 'tree' ||
-    !ref ||
-    remotePathParts.length === 0
+    !name
   ) {
-    throw new Error(`Invalid GitHub skill URL: ${value}`);
+    throw new Error(`Invalid skill repository URL: ${repo}`);
   }
 
   return {
-    repositoryUrl: `https://github.com/${owner}/${repo}.git`,
-    remotePath: remotePathParts.join('/'),
+    repositoryUrl: `https://github.com/${owner}/${name}.git`,
+    remotePath,
     ref,
   };
 };
@@ -260,7 +289,7 @@ With no selection option, all configured skills are updated.
 Skills:
 ${SKILL_SOURCES.map(
   (source) =>
-    `  ${source.skill.padEnd(18)} [${source.groups.join(', ')}] ${getSkillSourceUrl(source)}`,
+    `  ${source.skill.padEnd(18)} [${source.groups.join(', ')}] ${formatSkillTreeUrl(source)}`,
 ).join('\n')}
 
 npm examples:
@@ -415,11 +444,38 @@ const filesEqual = async (left, right) => {
 };
 
 /**
- * 将完整远端下载安全替换为本地 skill 严格镜像。
+ * 在暂存区递归移除 superpower 组 Markdown 中的技能命名空间前缀。
+ *
+ * @param {string} stagingDir
+ * @param {typeof SKILL_SOURCES[number]} source
+ * @returns {Promise<void>}
+ */
+export const postProcessSkill = async (stagingDir, source) => {
+  if (!source.groups.includes('superpower')) return;
+
+  const walk = async (directory) => {
+    const entries = await fs.promises.readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const filename = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await walk(filename);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const content = await fs.promises.readFile(filename, 'utf8');
+        const processed = content.replaceAll('superpowers:', '');
+        if (processed !== content) await fs.promises.writeFile(filename, processed);
+      }
+    }
+  };
+  await walk(stagingDir);
+};
+
+/**
+ * 将远端下载经后处理后安全替换为本地 skill 镜像。
  *
  * @param {{
  *   localDir: string,
  *   download: (stagingDir: string) => Promise<void>,
+ *   postProcess?: (stagingDir: string) => Promise<void>,
  *   onDetail?: (detail: { mode: 'U' | 'M' | 'D', path: string }) => void,
  *   rename?: (source: string, destination: string) => Promise<void>,
  * }} options
@@ -428,6 +484,7 @@ const filesEqual = async (left, right) => {
 export const syncSkillMirror = async ({
   localDir,
   download,
+  postProcess = async () => {},
   onDetail = () => { },
   rename = fs.promises.rename,
   rm = fs.promises.rm,
@@ -447,6 +504,7 @@ export const syncSkillMirror = async ({
 
   try {
     await download(stagingDir);
+    await postProcess(stagingDir);
     const remoteFiles = await collectRelativeFiles(stagingDir);
     const relativePaths = [...new Set([...localFiles, ...remoteFiles])].sort();
 
@@ -496,68 +554,100 @@ export const syncSkillMirror = async ({
   }
 };
 
+/** 由仓库根 `.git` URL 与分支名拼出 GitHub 分支源码归档地址。 */
+const archiveUrlFor = (repositoryUrl, ref) =>
+  repositoryUrl.slice(0, -4) +
+  '/archive/refs/heads/' + encodeURIComponent(ref) + '.tar.gz';
+
+/**
+ * 将分支归档流式下载到指定目录，返回归档文件路径。
+ *
+ * @param {{ repositoryUrl: string, ref: string }} source
+ * @param {string} archiveDir
+ * @param {typeof fetch} fetchImpl
+ * @returns {Promise<string>}
+ */
+const downloadRepositoryArchive = async ({ repositoryUrl, ref }, archiveDir, fetchImpl) => {
+  await fs.promises.mkdir(archiveDir, { recursive: true });
+  const archiveFile = path.join(archiveDir, 'source.tar.gz');
+  const archiveUrl = archiveUrlFor(repositoryUrl, ref);
+  const response = await fetchImpl(archiveUrl, { signal: AbortSignal.timeout(60_000) });
+  if (!response.ok) {
+    throw new Error('HTTP ' + response.status + ' downloading ' + archiveUrl);
+  }
+  if (!response.body) throw new Error('Empty archive response: ' + archiveUrl);
+  await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(archiveFile));
+  return archiveFile;
+};
+
+/**
+ * 从已下载的归档中校验并提取单个 skill 到暂存目录。
+ *
+ * @param {string} archiveFile
+ * @param {string} remotePath
+ * @param {string} stagingDir
+ * @returns {Promise<void>}
+ */
+const extractSkillFromArchive = async (archiveFile, remotePath, stagingDir) => {
+  const { t: listTar, x: extractTar } = await loadTar();
+  const prefix = remotePath + '/';
+  const selected = new Set();
+  let hasSkill = false;
+  let validationError;
+  // Inspect before extraction so invalid members cannot produce a partial mirror.
+  await listTar({ file: archiveFile, strict: true, onReadEntry: (entry) => {
+    const parts = entry.path.split('/');
+    parts.shift(); // GitHub archives wrap all paths in one repository directory.
+    const relative = parts.join('/').replace(/\/$/, '');
+    if (relative !== remotePath && !relative.startsWith(prefix)) return;
+    if (entry.header.path?.includes('\\') || entry.path.startsWith('/') ||
+      entry.path.split('/').some((part, index, all) =>
+        (!part && index !== all.length - 1) || part === '.' || part === '..' ||
+        /[\\:<>"|?*\x00-\x1f]/.test(part) || /[. ]$/.test(part) ||
+        /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) {
+      validationError ||= new Error('Unsafe archive path: ' + entry.path);
+      return;
+    }
+    if (!['File', 'Directory'].includes(entry.type)) {
+      validationError ||= new Error('Unsupported archive entry: ' + entry.path);
+      return;
+    }
+    selected.add(entry.path);
+    if (relative === prefix + 'SKILL.md' && entry.type === 'File') hasSkill = true;
+  } });
+  if (validationError) throw validationError;
+  if (!hasSkill) throw new Error('Missing upstream SKILL.md: ' + remotePath);
+  await extractTar({
+    file: archiveFile,
+    cwd: stagingDir,
+    strip: remotePath.split('/').length + 1,
+    strict: true,
+    chmod: true,
+    filter: (entryPath) => selected.has(entryPath),
+  });
+};
+
 /**
  * 用 fetch 下载 GitHub 分支源码归档，由 tar 校验并提取目标 skill。
  * 不调用 GitHub API，不依赖本机 Git 或 tar 命令。
  *
- * @param {string} sourceUrl
+ * @param {{ repo: string, path: string, ref: string }} source
  * @param {{ fetchImpl?: typeof fetch }} options
  * @returns {(stagingDir: string) => Promise<void>}
  */
 export const createHttpsDownloader = (
-  sourceUrl,
+  source,
   { fetchImpl = fetch } = {},
 ) => {
-  const { repositoryUrl, remotePath, ref } = parseGitHubTreeUrl(sourceUrl);
-  const archiveUrl = repositoryUrl.slice(0, -4) +
-    '/archive/refs/heads/' + encodeURIComponent(ref) + '.tar.gz';
-  const prefix = remotePath + '/';
+  const { repositoryUrl, remotePath, ref } = resolveRepository(source);
 
   return async (stagingDir) => {
     const archiveDir = await fs.promises.mkdtemp(path.join(path.dirname(stagingDir), 'archive-'));
-    const archiveFile = path.join(archiveDir, 'source.tar.gz');
     try {
-      const response = await fetchImpl(archiveUrl, { signal: AbortSignal.timeout(60_000) });
-      if (!response.ok) {
-        throw new Error('HTTP ' + response.status + ' downloading ' + archiveUrl);
-      }
-      if (!response.body) throw new Error('Empty archive response: ' + archiveUrl);
-      await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(archiveFile));
-
-      const selected = new Set();
-      let hasSkill = false;
-      let validationError;
-      // Inspect before extraction so invalid members cannot produce a partial mirror.
-      await listTar({ file: archiveFile, strict: true, onReadEntry: (entry) => {
-        const parts = entry.path.split('/');
-        parts.shift(); // GitHub archives wrap all paths in one repository directory.
-        const relative = parts.join('/').replace(/\/$/, '');
-        if (relative !== remotePath && !relative.startsWith(prefix)) return;
-        if (entry.header.path?.includes('\\') || entry.path.startsWith('/') ||
-          entry.path.split('/').some((part, index, all) =>
-            (!part && index !== all.length - 1) || part === '.' || part === '..' ||
-            /[\\:<>"|?*\x00-\x1f]/.test(part) || /[. ]$/.test(part) ||
-            /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) {
-          validationError ||= new Error('Unsafe archive path: ' + entry.path);
-          return;
-        }
-        if (!['File', 'Directory'].includes(entry.type)) {
-          validationError ||= new Error('Unsupported archive entry: ' + entry.path);
-          return;
-        }
-        selected.add(entry.path);
-        if (relative === prefix + 'SKILL.md' && entry.type === 'File') hasSkill = true;
-      } });
-      if (validationError) throw validationError;
-      if (!hasSkill) throw new Error('Missing upstream SKILL.md: ' + remotePath);
-      await extractTar({
-        file: archiveFile,
-        cwd: stagingDir,
-        strip: remotePath.split('/').length + 1,
-        strict: true,
-        chmod: true,
-        filter: (entryPath) => selected.has(entryPath),
-      });
+      const archiveFile = await downloadRepositoryArchive(
+        { repositoryUrl, ref }, archiveDir, fetchImpl,
+      );
+      await extractSkillFromArchive(archiveFile, remotePath, stagingDir);
     } finally {
       await removeDir(archiveDir);
     }
@@ -586,51 +676,161 @@ export const runGit = (args, { spawnImpl = spawn } = {}) =>
   });
 
 /**
- * 浅层稀疏检出上游，只将目标 skill 文件复制到共享 staging 目录。
- * Git 仓库随共享升级工作目录一起清理。
+ * 共享下载会话中单个仓库工作目录名：`owner-repo`，非 main 时追加 ref。
+ * 不按 skill 命名，以便同仓库多 skill 共用一目了然的目录。
  *
- * @param {string} sourceUrl
+ * @param {{ repositoryUrl: string, ref: string }} repository
+ * @returns {string}
+ */
+export const repositoryWorkDirName = ({ repositoryUrl, ref }) => {
+  const { pathname } = new URL(repositoryUrl);
+  const segments = pathname.replace(/\.git$/i, '').split('/').filter(Boolean);
+  const owner = segments.at(-2) || 'repo';
+  const name = segments.at(-1) || 'unknown';
+  const slug = (value) =>
+    String(value).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
+  const base = `${slug(owner)}-${slug(name)}`;
+  return ref === 'main' ? base : `${base}-${slug(ref)}`;
+};
+
+/** 一次性检出同一仓库的全部所选路径，避免并发修改稀疏检出范围。 */
+const checkoutGitRepository = async ({ repositoryUrl, ref, paths }, repositoryDir, run) => {
+  await run([
+    'clone', '--depth', '1', '--single-branch', '--filter=blob:none',
+    '--sparse', '--branch', ref, repositoryUrl, repositoryDir,
+  ]);
+  await run(['-C', repositoryDir, 'sparse-checkout', 'set', '--no-cone', ...paths]);
+  return repositoryDir;
+};
+
+/** 验证单个 skill 后按其 path 复制到独立暂存区。 */
+const copyGitSkill = async (repositoryDir, remotePath, stagingDir) => {
+  const sourceDir = path.join(repositoryDir, ...remotePath.split('/'));
+  const skillFile = await fs.promises.stat(path.join(sourceDir, 'SKILL.md')).catch((error) => {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+      throw new Error('Missing upstream SKILL.md: ' + remotePath);
+    }
+    throw error;
+  });
+  if (!skillFile.isFile()) throw new Error('Missing upstream SKILL.md: ' + remotePath);
+  await fs.promises.cp(sourceDir, stagingDir, { recursive: true, force: true });
+};
+
+/**
+ * 单技能浅层稀疏下载；检出目录由调用方的升级工作目录负责清理。
+ *
+ * @param {{ repo: string, path: string, ref: string }} source
  * @param {{ run?: typeof runGit }} options
  * @returns {(stagingDir: string) => Promise<void>}
  */
-export const createGitSparseDownloader = (sourceUrl, { run = runGit } = {}) => {
-  const { repositoryUrl, remotePath, ref } = parseGitHubTreeUrl(sourceUrl);
+export const createGitSparseDownloader = (source, { run = runGit } = {}) => {
+  const resolved = resolveRepository(source);
   return async (stagingDir) => {
     const repositoryDir = path.join(path.dirname(stagingDir), 'repository');
-    await run([
-      'clone', '--depth', '1', '--single-branch', '--filter=blob:none',
-      '--sparse', '--branch', ref, repositoryUrl, repositoryDir,
-    ]);
-    await run(['-C', repositoryDir, 'sparse-checkout', 'set', '--no-cone', remotePath]);
-    const sourceDir = path.join(repositoryDir, ...remotePath.split('/'));
-    const skillFile = await fs.promises.stat(path.join(sourceDir, 'SKILL.md')).catch((error) => {
-      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
-        throw new Error('Missing upstream SKILL.md: ' + remotePath);
-      }
-      throw error;
-    });
-    if (!skillFile.isFile()) throw new Error('Missing upstream SKILL.md: ' + remotePath);
-    await fs.promises.cp(sourceDir, stagingDir, { recursive: true, force: true });
+    await checkoutGitRepository({ ...resolved, paths: [resolved.remotePath] }, repositoryDir, run);
+    await copyGitSkill(repositoryDir, resolved.remotePath, stagingDir);
   };
 };
 
 /**
- * 将上游完整下载安全同步为本地 skill 严格镜像。
+ * 按仓库和 ref 合并所选 path，共享一次 acquire，再分别 materialize。
+ * acquire 结果（含失败）通过 Promise 复用；全部消费者结束后调用 cleanup。
+ *
+ * @param {typeof SKILL_SOURCES} sources
+ * @param {{
+ *   root?: string,
+ *   workDirPrefix: string,
+ *   label: string,
+ *   acquire: (repository: object, workPath: string) => Promise<unknown>,
+ *   materialize: (acquired: unknown, remotePath: string, stagingDir: string) => Promise<void>,
+ * }} options
+ * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ */
+const createDownloadSession = async (
+  sources,
+  { root = skillsRoot, workDirPrefix, label, acquire, materialize },
+) => {
+  const repositories = new Map();
+  const keyOf = ({ repositoryUrl, ref }) => JSON.stringify([repositoryUrl, ref]);
+  for (const source of sources) {
+    const parsed = resolveRepository(source);
+    const key = keyOf(parsed);
+    if (!repositories.has(key)) repositories.set(key, { ...parsed, paths: new Set() });
+    repositories.get(key).paths.add(parsed.remotePath);
+  }
+  await fs.promises.mkdir(root, { recursive: true });
+  const workDir = await fs.promises.mkdtemp(path.join(root, workDirPrefix));
+  return {
+    download: async (source, stagingDir) => {
+      const parsed = resolveRepository(source);
+      const repository = repositories.get(keyOf(parsed));
+      if (!repository || !repository.paths.has(parsed.remotePath)) {
+        throw new Error(`Skill not selected for ${label} download: ${source.skill}`);
+      }
+      repository.ready ??= acquire(
+        repository,
+        path.join(workDir, repositoryWorkDirName(repository)),
+      );
+      await materialize(await repository.ready, parsed.remotePath, stagingDir);
+    },
+    cleanup: () => removeDir(workDir),
+  };
+};
+
+/**
+ * 为一次升级共享 HTTPS 归档：按仓库和 ref 合并路径，每组只下载一次 `.tar.gz`。
+ *
+ * @param {typeof SKILL_SOURCES} sources
+ * @param {{ root?: string, fetchImpl?: typeof fetch }} options
+ * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ */
+export const createHttpsDownloadSession = (
+  sources,
+  { root = skillsRoot, fetchImpl = fetch } = {},
+) => createDownloadSession(sources, {
+  root,
+  workDirPrefix: '.archives-upgrade-',
+  label: 'HTTPS',
+  acquire: (repository, dir) => downloadRepositoryArchive(repository, dir, fetchImpl),
+  materialize: extractSkillFromArchive,
+});
+
+/**
+ * 为一次升级共享 Git 检出：按仓库和 ref 合并路径，每组只克隆一次。
+ *
+ * @param {typeof SKILL_SOURCES} sources
+ * @param {{ root?: string, run?: typeof runGit }} options
+ * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ */
+export const createGitDownloadSession = (
+  sources,
+  { root = skillsRoot, run = runGit } = {},
+) => createDownloadSession(sources, {
+  root,
+  workDirPrefix: '.repositories-upgrade-',
+  label: 'Git',
+  acquire: (repository, dir) => checkoutGitRepository(repository, dir, run),
+  materialize: copyGitSkill,
+});
+
+/**
+ * 将上游完整下载经后处理后安全同步为本地 skill 镜像。
  *
  * @param {typeof SKILL_SOURCES[number]} source
  * @param {(detail: string | { mode: 'U' | 'M' | 'D', path: string }) => void} onDetail
- * @param {{ git?: boolean }} options
+ * @param {{ git?: boolean, download?: (stagingDir: string) => Promise<void> }} options
  * @returns {Promise<{ durationMs: number, fileCount: number }>}
  */
-const syncSkill = async (source, onDetail, { git = true } = {}) => {
+const syncSkill = async (source, onDetail, { git = true, download } = {}) => {
   const startedAt = Date.now();
   const createDownloader = git ? createGitSparseDownloader : createHttpsDownloader;
-  const download = createDownloader(getSkillSourceUrl(source));
+  download ??= createDownloader(source);
   const localDir = path.join(skillsRoot, source.skill);
 
   const { fileCount } = await syncSkillMirror({
     localDir,
     download,
+    postProcess: (stagingDir) => postProcessSkill(stagingDir, source),
     onDetail,
   });
 
@@ -730,17 +930,28 @@ export const runCli = async (argv = process.argv.slice(2)) => {
   console.log(`Project: ${projectRoot}`);
   console.log();
 
+  let downloadSession;
   try {
+    downloadSession = args.git
+      ? await createGitDownloadSession(selected)
+      : await createHttpsDownloadSession(selected);
     await syncSkillsConcurrently(
       selected,
-      (source, onDetail) => syncSkill(source, onDetail, { git: args.git }),
+      (source, onDetail) => syncSkill(source, onDetail, {
+        git: args.git,
+        download: (stagingDir) => downloadSession.download(source, stagingDir),
+      }),
       createUpgradeReporter(selected),
     );
 
     console.log();
     console.log('Upgrade skills done');
   } finally {
-    await cleanupUpgradeWorkDirs(skillsRoot);
+    try {
+      await downloadSession?.cleanup();
+    } finally {
+      await cleanupUpgradeWorkDirs(skillsRoot);
+    }
   }
 };
 

@@ -1,6 +1,7 @@
 ---
 name: reviewer
 description: "ai-everything-reviewer"
+disable-model-invocation: true
 ---
 
 # Reviewer

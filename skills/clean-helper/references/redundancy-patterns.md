@@ -15,7 +15,7 @@ Ask:
 
 | Pattern | Cleanup |
 | ------- | ------- |
-| Nested `if (x)` then `if (x)` again | Flatten |
+| Nested `if (x)` then `if (x)` again | Flatten only if repeated evaluation is stable and side-effect-free (including getters/Proxy access) |
 | `switch` with duplicate bodies | Merge cases |
 | `return A; ... unreachable` | Delete unreachable tail |
 | Identical `try/catch` in siblings | Shared helper (optional, user-approved) |

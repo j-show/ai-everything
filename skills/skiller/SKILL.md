@@ -1,6 +1,7 @@
 ---
 name: skiller
 description: "ai-everything-skiller"
+disable-model-invocation: true
 ---
 
 # Skiller

@@ -89,7 +89,7 @@ const createTtyReporter = (
   let renderedLineCount = 0;
   let finished = false;
 
-  const detailLimit = Math.max(
+  const liveDetailLimit = Math.max(
     1,
     Math.floor((Math.max(stream.rows || 24, 8) - states.size) / states.size) -
       3,
@@ -116,10 +116,15 @@ const createTtyReporter = (
         truncate(detail.path, width - 4)
       );
     };
+    // Live updates may roll; finished panels keep every file change.
+    const visibleDetails =
+      state.status === 'PASS' || state.status === 'FAIL' || finished
+        ? state.details
+        : state.details.slice(-liveDetailLimit);
     const lines = [
       paint(color, ANSI.green, truncate(state.skill, width)),
       `${paint(color, ANSI.purple, '│')} ${paint(color, badgeColor, badge)} ${paint(color, ANSI.yellow, source)}`,
-      ...state.details.slice(-detailLimit).map(formatDetail),
+      ...visibleDetails.map(formatDetail),
     ];
 
     let footer;

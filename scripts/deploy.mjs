@@ -1,16 +1,17 @@
 /**
  * 部署脚本：将仓库根目录的 `commands`、`rules`、`skills` 通过符号链接映射到目标 harness 目录。
  *
- * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude` / `.q-code`。
+ * - **user 模式**（默认）：链接到用户主目录下的 `.cursor` / `.codex` / `.claude` / `.q-code` / `.agents`。
  * - **local 模式**：链接到当前工作目录下同名文件夹，便于在单仓库内调试。
+ * - **agent**：user 模式目标为 `~/.agents`（例如 `~/.agents/skills`）；local 模式为当前目录 `.agents`。
  * - **codex**：仅链接 `skills/`（不部署 `commands`、`rules`）。
- * - **project 入口**：默认链接到项目的 `.agents/`；`--custom` 则直接链接到项目根目录。
+ * - **project**：`npm run deploy:project <project dir>`，脚本为 `npm run deploy -t project`。资源直接链接到该项目目录。
  *
  * 用法：
  * ```bash
  * node scripts/deploy.mjs --type cursor [--mode user]
+ * npm run deploy:project <project dir>
  * npm run deploy -- --type cursor
- * npm run deploy:cursor
  * ```
  *
  * @module scripts/deploy
@@ -29,17 +30,18 @@ const projectRoot = path.resolve(__dirname, '..');
 
 /**
  * harness 类型与目标配置目录名的映射。
- * @type {Record<'cursor' | 'codex' | 'claude' | 'qcode', string>}
+ * @type {Record<'agent' | 'cursor' | 'codex' | 'claude' | 'qcode', string>}
  */
 const TYPE_DIRS = {
+  agent: '.agents',
   cursor: '.cursor',
   codex: '.codex',
   claude: '.claude',
   qcode: '.q-code',
 };
 
-/** `--type` 允许的取值，与 `TYPE_DIRS` 的键一致。 */
-const VALID_TYPES = Object.keys(TYPE_DIRS);
+/** `--type` 允许的取值。`project` 需要项目目录，不使用 `TYPE_DIRS`。 */
+const VALID_TYPES = [...Object.keys(TYPE_DIRS), 'project'];
 
 /** `--mode` 允许的取值：`user` 写主目录，`local` 写当前工作目录。 */
 const VALID_MODES = ['user', 'local'];
@@ -152,8 +154,8 @@ const parseNpmForwardedArgs = () => {
  * 合并 `process.argv` 与 npm 转发的参数，校验未知选项，并推断缺失的 type/mode。
  *
  * @param {string[]} argv 通常为 `process.argv`
- * @returns {{ type: string | null, mode: string, help: boolean }}
- * @remarks 存在未知 `-` 开头参数时向 stderr 提示并 `process.exit(1)`；无 flag 的首个 positional 当作 type，第二个合法 mode 名当作 mode（兼容 npm 只转发值）
+ * @returns {{ type: string | null, mode: string, help: boolean, projectDir: string | null, extraProjectDir: boolean }}
+ * @remarks 存在未知 `-` 开头参数或重复 `--type` 时向 stderr 提示并 `process.exit(1)`。无 flag 的首个 positional 当作 type。`project` 的下一个 positional 是项目目录。`npm run deploy -t project` 会吞掉 `-t`，只把 `project` 和目录传给脚本。
  */
 const parseArgs = (argv) => {
   const cli = parseArgsFromList(argv, 2);
@@ -163,14 +165,18 @@ const parseArgs = (argv) => {
     type: cli.type || npm.type,
     mode: cli.mode || npm.mode || 'user',
     help: cli.help || npm.help,
+    projectDir: null,
+    extraProjectDir: false,
   };
 
+  let typeCount = 0;
   const unknown = [];
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg === '--help' || arg === '-h') {
+      continue;
+    }
     if (
-      arg === '--help' ||
-      arg === '-h' ||
       arg === '--type' ||
       arg === '-t' ||
       arg === '--mode' ||
@@ -178,12 +184,10 @@ const parseArgs = (argv) => {
       arg.startsWith('--type=') ||
       arg.startsWith('--mode=')
     ) {
-      if (
-        arg === '--type' ||
-        arg === '-t' ||
-        arg === '--mode' ||
-        arg === '-m'
-      ) {
+      if (arg === '--type' || arg === '-t' || arg.startsWith('--type=')) {
+        typeCount++;
+      }
+      if (arg === '--type' || arg === '-t' || arg === '--mode' || arg === '-m') {
         i++;
       }
       continue;
@@ -192,9 +196,17 @@ const parseArgs = (argv) => {
       unknown.push(arg);
       continue;
     }
-    // npm run deploy --type cursor 时，npm 常只把值传给脚本
+    // npm run deploy -t project <dir> 时，npm 常只把 `project` 和目录传给脚本
     if (!result.type) {
       result.type = arg;
+      continue;
+    }
+    if (result.type === 'project') {
+      if (!result.projectDir) {
+        result.projectDir = arg;
+        continue;
+      }
+      result.extraProjectDir = true;
       continue;
     }
     if (!result.mode && VALID_MODES.includes(arg)) {
@@ -205,6 +217,11 @@ const parseArgs = (argv) => {
       continue;
     }
     unknown.push(arg);
+  }
+
+  if (typeCount > 1) {
+    console.error('Error: --type (-t) can only be specified once.');
+    process.exit(1);
   }
 
   if (unknown.length > 0) {
@@ -220,21 +237,19 @@ const parseArgs = (argv) => {
 
 /** 向 stdout 打印用法说明。 */
 const printHelp = () => {
-  console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude|qcode> [--mode <user|local>]
-       node scripts/deploy.mjs --project <project dir> [--general | --custom]
+  console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude|qcode|agent> [--mode <user|local>]
+       npm run deploy:project <project dir>
+       node scripts/deploy.mjs --type project <project dir>
 
 Options:
-  -t, --type <cursor|codex|claude|qcode>  Harness type (required)
+  -t, --type <cursor|codex|claude|qcode|agent|project>  Harness type, or project (required)
   -m, --mode <user|local>           Install target: user home or cwd (default: user)
   -h, --help                        Show this help
-      --general                     Project deployment: use <project dir>/.agents (default)
-      --custom                      Project deployment: use <project dir> directly
 
 npm examples:
-  pnpm deploy:project "D:/my project"
-  pnpm deploy:project "D:/my project" --general
-  pnpm deploy:project "D:/my project" --custom
+  npm run deploy:project "D:/my project"
   npm run deploy -- --type cursor
+  npm run deploy -- -t agent
   npm run deploy --type=cursor
   npm run deploy --type cursor
 `);
@@ -555,28 +570,6 @@ const deployResources = (targetBase, resourceDirs) => {
   console.log('Deploy done');
 };
 
-// 独立解析 project 入口，项目路径不参与 harness 类型或 npm 环境参数推断。
-if (process.argv[2] === '--project') {
-  const projectArgs = process.argv.slice(3);
-  const custom = projectArgs.includes('--custom');
-  if (custom && projectArgs.includes('--general')) {
-    console.error('Error: --general and --custom cannot be used together.');
-    process.exit(1);
-  }
-  const paths = projectArgs.filter((arg) => !['--general', '--custom'].includes(arg));
-  if (paths.length === 1 && ['--help', '-h'].includes(paths[0])) {
-    printHelp();
-    process.exit(0);
-  }
-  if (paths.length !== 1 || !paths[0].trim() || paths[0].startsWith('-')) {
-    console.error('Error: exactly one project dir is required. Usage: pnpm deploy:project <project dir> [--general | --custom]');
-    process.exit(1);
-  }
-  const projectDir = path.resolve(paths[0]);
-  deployResources(custom ? projectDir : path.join(projectDir, '.agents'), RESOURCE_DIRS);
-  process.exit(0);
-}
-
 const args = parseArgs(process.argv);
 
 if (args.help) {
@@ -596,6 +589,20 @@ if (!VALID_TYPES.includes(args.type)) {
     `Error: invalid type "${args.type}". Expected: ${VALID_TYPES.join(', ')}${hint}`,
   );
   process.exit(1);
+}
+
+if (args.type === 'project') {
+  if (args.extraProjectDir || !args.projectDir || !args.projectDir.trim()) {
+    console.error('Error: exactly one project dir is required. Usage: npm run deploy:project <project dir>');
+    process.exit(1);
+  }
+  const projectDir = path.resolve(args.projectDir);
+  if (pathExists(projectDir) && !fs.statSync(projectDir).isDirectory()) {
+    console.error(`Error: project dir is not a directory: ${projectDir}`);
+    process.exit(1);
+  }
+  deployResources(projectDir, RESOURCE_DIRS);
+  process.exit(0);
 }
 
 if (!VALID_MODES.includes(args.mode)) {

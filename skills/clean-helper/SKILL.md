@@ -5,7 +5,7 @@ description: "Remove dead code, deprecated branches, unused functions, and redun
 
 # Clean Helper
 
-IRON LAW: **Remove only code you can prove is dead, superseded, or explicitly approved by the user** — within the resolved scope. Never delete based on a comment alone; never mix behavior changes or unrelated refactors into a cleanup pass.
+IRON LAW: **Clean only within the authorized scope and preserve required behavior.** Approval or a deprecated label alone does not prove code is dead. Keep valid tests and live callers; never mix unrelated refactors into a cleanup pass.
 
 ## Workflow
 
@@ -24,12 +24,13 @@ Clean Helper Progress:
   - [ ] Load references/redundancy-patterns.md
   - [ ] Mark merge/simplify opportunities separate from deletions
 - [ ] Step 3: Confirm ⚠️ REQUIRED
-  - [ ] Present removal/simplify plan; wait for user approval
+  - [ ] Reuse existing authorization; confirm only uncovered items
 - [ ] Step 4: Apply cleanup
+  - [ ] Record pre-cleanup state and relevant verification results
   - [ ] Delete/simplify only approved items
 - [ ] Step 5: Verify ⚠️ REQUIRED
   - [ ] Load references/verification.md
-  - [ ] Run scoped check/test; fix breakages from removals
+  - [ ] Classify results; repair or undo cleanup-induced regressions
 - [ ] Step 6: Self-check ⚠️ REQUIRED
 ```
 
@@ -37,7 +38,7 @@ Clean Helper Progress:
 
 1. Complete Step 0 → 1 → 2 before Step 3.
 2. Do **not** edit production code until Step 3 approval (or user pre-authorized “apply all safe removals”).
-3. After Step 4, run Step 5 until pass or user accepts documented gaps.
+3. A read-only inventory ends after presenting findings. Otherwise run Step 5 after each logical cleanup; unresolved items do not block independent safe work.
 
 ## Step 0: Scope ⛔ BLOCKING
 
@@ -71,6 +72,8 @@ Kinds: `unused-export`, `unreferenced-fn`, `dead-branch`, `deprecated-api`, `sta
 
 Skip items with weak evidence — list under “needs user input” instead of Step 4.
 
+Valid test-only callers are usage evidence, not a reason to delete the test with its implementation. Retire a test only when its contract is explicitly retired and changing that test is in scope.
+
 Save the inventory table to `.review/clean-{timestamp}.md` (timestamp filename).
 
 ## Step 2: Redundancy pass
@@ -87,13 +90,13 @@ Present to the user (Chinese summary OK):
 2. **Simplify** — redundancy merges (behavior-preserving)
 3. **Defer** — uncertain items and why
 
-Ask:
+Reuse explicit authorization from the conversation for the covered items. For uncovered items only, ask:
 
 - Apply all **Delete** items?
 - Apply **Simplify** items?
 - Any item to keep despite appearing unused (public API, plugin hook, etc.)?
 
-If user said “remove all deprecated” upfront, still list P0-risk items (public exports, shared libs) for explicit ack.
+A broad “remove all deprecated” does not establish which public contracts may break. Defer those items unless the specific contract removal is already authorized; continue independent safe items.
 
 Update the `.review/clean-{timestamp}.md` copy with the final approved plan before Step 4.
 
@@ -101,6 +104,7 @@ Update the `.review/clean-{timestamp}.md` copy with the final approved plan befo
 
 Rules:
 
+- Load `references/verification.md` before editing: record the current diff/index, preserve the current contents of files to edit, and run relevant baseline checks. Keep later cleanup hunks distinguishable from user changes.
 - One logical change per commit-worthy chunk (user may commit separately).
 - Remove deprecated branches by deleting the dead arm and folding constants — do not leave `if (false)` stubs.
 - When deleting a function, remove imports/call sites in scope; update barrels (`index.ts`) in same pass.
@@ -110,7 +114,16 @@ Rules:
 
 Load `references/verification.md`.
 
-Run the narrowest command that exercises touched code. If verification fails, fix import/typing fallout from removals — do not restore dead code without user approval.
+Follow `references/verification.md` for command selection, result classification and recovery:
+
+```text
+Failure → compare with pre-cleanup evidence
+  ├─ Caused by this cleanup → repair in scope or undo only its responsible hunks → rerun
+  ├─ Pre-existing / environment blocked → retain evidence; continue independent checks
+  └─ Cause unknown / zero relevant tests → investigate or report unverified
+```
+
+Do not seek fresh permission to undo your own proven regression. If restoration overlaps user changes or its provenance is uncertain, preserve the current content, defer that item and ask only about the conflict. Never overwrite a whole file/index from an old snapshot or change valid assertions to make cleanup pass.
 
 ## Step 6: Self-check ⚠️ REQUIRED
 
@@ -131,6 +144,7 @@ Run the pre-delivery checklist below. Confirm `.review/clean-{timestamp}.md` ref
 - Drive-by style/format churn on untouched lines
 - Skipping Step 5 after deletions
 - Treating test-only helpers as dead because production does not call them (check test imports)
+- Reporting exit 0 as verified when no relevant test ran, or removing valid failures to obtain a green run
 
 ## Pre-Delivery Checklist
 
@@ -138,6 +152,7 @@ Run the pre-delivery checklist below. Confirm `.review/clean-{timestamp}.md` ref
 - [ ] Every deletion has evidence noted in inventory
 - [ ] User approved Step 3 plan (or pre-authorized scope stated)
 - [ ] No unrelated files modified
-- [ ] Verification command run on scoped area
+- [ ] Actual commands, exit codes, relevant test counts and remaining failures/gaps reported
+- [ ] Cleanup-induced regressions repaired or locally undone; user changes and index preserved
 - [ ] Deferred/uncertain items listed for user
 - [ ] Inventory/plan copy saved under `.review/clean-{timestamp}.md`

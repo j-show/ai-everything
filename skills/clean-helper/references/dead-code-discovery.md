@@ -21,7 +21,7 @@ For each symbol or branch:
 1. **References** — ripgrep symbol name; include string literals for dynamic names.
 2. **Entry points** — CLI commands, HTTP routes, job handlers, event subscribers.
 3. **External** — OpenAPI/SDK consumers, plugin interfaces, semver public API.
-4. **Tests** — dedicated tests may be the only caller; remove test + impl together.
+4. **Tests** — valid test-only callers count as usage. Preserve the helper and regression unless the tested contract is explicitly retired; a test change also needs to be in the authorized write scope. Never infer retirement from the proposed implementation deletion.
 
 ## Optional static analysis (cross-check only)
 
