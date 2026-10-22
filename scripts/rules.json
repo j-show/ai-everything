@@ -1,0 +1,47 @@
+[
+    {
+        "rule": "common",
+        "repo": "https://github.com/affaan-m/ECC",
+        "ref": "main",
+        "path": "rules/common",
+        "groups": [
+            "ecc"
+        ]
+    },
+    {
+        "rule": "typescript",
+        "repo": "https://github.com/affaan-m/ECC",
+        "ref": "main",
+        "path": "rules/typescript",
+        "groups": [
+            "ecc"
+        ]
+    },
+    {
+        "rule": "web",
+        "repo": "https://github.com/affaan-m/ECC",
+        "ref": "main",
+        "path": "rules/web",
+        "groups": [
+            "ecc"
+        ]
+    },
+    {
+        "rule": "vue",
+        "repo": "https://github.com/affaan-m/ECC",
+        "ref": "main",
+        "path": "rules/vue",
+        "groups": [
+            "ecc"
+        ]
+    },
+    {
+        "rule": "java",
+        "repo": "https://github.com/affaan-m/ECC",
+        "ref": "main",
+        "path": "rules/java",
+        "groups": [
+            "ecc"
+        ]
+    }
+]

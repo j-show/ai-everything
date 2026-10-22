@@ -1,17 +1,14 @@
 /**
- * 从上游 GitHub 仓库同步已配置 skills 到本仓库 `skills/` 目录。
+ * 技能与规则升级共用的下载、镜像替换和 CLI 辅助函数。
  *
- * @module scripts/upgrade-skill
+ * @module scripts/common-download
  */
 
-import fs from 'node:fs';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-
-import { createUpgradeReporter } from './upgrade-skill-reporter.mjs';
 
 /** 提取归档时才加载 tar，未安装时 --git 与帮助仍可运行。 */
 const loadTar = async () => {
@@ -25,147 +22,26 @@ const loadTar = async () => {
   }
 };
 
-//#region Constants
+const titleNoun = (noun) => noun.charAt(0).toUpperCase() + noun.slice(1);
 
 /**
- * 可从上游更新的 skill 配置。
- *
- * `repo` 为仓库根 URL，`path` 为仓库内相对路径，`ref` 为要下载的分支。
- * `groups` 同时定义 CLI 分组选项，例如 `design` 对应 `--design`。
- */
-export const SKILL_SOURCES = [
-  {
-    skill: 'hatch-pet',
-    repo: 'https://github.com/openai/skills',
-    ref: 'main',
-    path: 'skills/.curated/hatch-pet',
-    groups: ['pet'],
-  },
-  {
-    skill: 'skill-forge',
-    repo: 'https://github.com/sanyuan0704/sanyuan-skills',
-    ref: 'main',
-    path: 'skills/skill-forge',
-    groups: ['skill'],
-  },
-  {
-    skill: 'grilling',
-    repo: 'https://github.com/mattpocock/skills',
-    ref: 'main',
-    path: 'skills/productivity/grilling',
-    groups: ['mattpocock'],
-  },
-  {
-    skill: 'domain-modeling',
-    repo: 'https://github.com/mattpocock/skills',
-    ref: 'main',
-    path: 'skills/engineering/domain-modeling',
-    groups: ['mattpocock'],
-  },
-  {
-    skill: 'writing-for-agents',
-    repo: 'https://github.com/mattpocock/skills',
-    ref: 'main',
-    path: 'skills/productivity/writing-for-agents',
-    groups: ['mattpocock'],
-  },
-  {
-    skill: 'frontend-design',
-    repo: 'https://github.com/anthropics/skills',
-    ref: 'main',
-    path: 'skills/frontend-design',
-    groups: ['design'],
-  },
-  {
-    skill: 'ui-ux-pro-max',
-    repo: 'https://github.com/nextlevelbuilder/ui-ux-pro-max-skill',
-    ref: 'main',
-    path: '.claude/skills/ui-ux-pro-max',
-    groups: ['design'],
-  },
-  {
-    skill: 'brainstorming',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/brainstorming',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'writing-plans',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/writing-plans',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'test-driven-development',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/test-driven-development',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'systematic-debugging',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/systematic-debugging',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'requesting-code-review',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/requesting-code-review',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'receiving-code-review',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/receiving-code-review',
-    groups: ['superpower'],
-  },
-  {
-    skill: 'verification-before-completion',
-    repo: 'https://github.com/obra/superpowers',
-    ref: 'main',
-    path: 'skills/verification-before-completion',
-    groups: ['superpower'],
-  }
-];
-
-/** 从配置派生的可用分组，顺序与首次出现顺序一致。 */
-export const SKILL_GROUPS = Object.freeze([
-  ...new Set(SKILL_SOURCES.flatMap(({ groups }) => groups)),
-]);
-
-/** 仅用于帮助文本：把配置展示成可打开的 GitHub tree 页面。 */
-const formatSkillTreeUrl = ({ repo, path: remotePath, ref }) =>
-  `${repo}/tree/${ref}/${remotePath}`;
-
-//#endregion
-
-/** 当前模块路径与仓库目录。 */
-const modulePath = fileURLToPath(import.meta.url);
-const projectRoot = path.resolve(path.dirname(modulePath), '..');
-const skillsRoot = path.join(projectRoot, 'skills');
-
-/**
- * 把技能配置解析成下载参数。不经过 tree URL。
+ * 把来源配置解析成下载参数。不经过 tree URL。
  *
  * @param {{ repo: string, path: string, ref: string }} source
+ * @param {{ noun?: string }} [options]
  * @returns {{ repositoryUrl: string, remotePath: string, ref: string }}
  */
-const resolveRepository = ({ repo, path: remotePath, ref }) => {
+export const resolveRepository = ({ repo, path: remotePath, ref }, { noun = 'skill' } = {}) => {
+  const title = titleNoun(noun);
   if (!repo || !remotePath || !ref) {
-    throw new Error('Skill source requires repo, path, and ref');
+    throw new Error(`${title} source requires repo, path, and ref`);
   }
 
   let parsed;
   try {
     parsed = new URL(repo);
   } catch {
-    throw new Error(`Invalid skill repository URL: ${repo}`);
+    throw new Error(`Invalid ${noun} repository URL: ${repo}`);
   }
 
   const segments = parsed.pathname.split('/').filter(Boolean);
@@ -178,7 +54,7 @@ const resolveRepository = ({ repo, path: remotePath, ref }) => {
     !owner ||
     !name
   ) {
-    throw new Error(`Invalid skill repository URL: ${repo}`);
+    throw new Error(`Invalid ${noun} repository URL: ${repo}`);
   }
 
   return {
@@ -187,120 +63,6 @@ const resolveRepository = ({ repo, path: remotePath, ref }) => {
     ref,
   };
 };
-
-/**
- * 解析升级脚本的命令行参数。
- *
- * @param {string[]} argv 不包含 Node 与脚本路径的参数列表
- * @returns {{ help: boolean, git: boolean, skills: string[], groups: string[] }}
- */
-export const parseArgs = (argv) => {
-  const result = { help: false, git: true, skills: [], groups: [] };
-  let transport;
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-
-    if (arg === '--git' || arg === '--fetch') {
-      if (transport && transport !== arg) {
-        throw new Error('--fetch and --git are mutually exclusive');
-      }
-      transport = arg;
-      result.git = arg === '--git';
-      continue;
-    }
-
-    if (arg === '--help' || arg === '-h') {
-      result.help = true;
-      continue;
-    }
-
-    if (arg === '--skill' || arg === '-s') {
-      const value = argv[++i];
-      if (!value) {
-        throw new Error('Missing value for --skill');
-      }
-      result.skills.push(value);
-      continue;
-    }
-
-    if (arg.startsWith('--skill=')) {
-      const value = arg.slice('--skill='.length);
-      if (!value) {
-        throw new Error('Missing value for --skill');
-      }
-      result.skills.push(value);
-      continue;
-    }
-
-    if (arg.startsWith('--') && SKILL_GROUPS.includes(arg.slice(2))) {
-      result.groups.push(arg.slice(2));
-      continue;
-    }
-
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return result;
-};
-
-/**
- * 根据参数选择要更新的上游配置。
- *
- * 存在 `--skill` 时忽略所有分组选项；无任何选择参数时返回全部配置。
- *
- * @param {{ skills: string[], groups: string[] }} args
- * @returns {typeof SKILL_SOURCES[number][]}
- */
-export const selectSources = ({ skills, groups }) => {
-  if (skills.length > 0) {
-    const unknown = skills.filter(
-      (name) => !SKILL_SOURCES.some(({ skill }) => skill === name),
-    );
-
-    if (unknown.length > 0) {
-      throw new Error(`unknown skill(s): ${[...new Set(unknown)].join(', ')}`);
-    }
-
-    return SKILL_SOURCES.filter(({ skill }) => skills.includes(skill));
-  }
-
-  if (groups.length === 0) {
-    return [...SKILL_SOURCES];
-  }
-
-  return SKILL_SOURCES.filter(({ groups: sourceGroups }) =>
-    sourceGroups.some((group) => groups.includes(group)),
-  );
-};
-
-/** 生成由集中配置派生的 CLI 帮助文本。 */
-export const formatHelp = () => `Usage: node scripts/upgrade-skill.mjs [options]
-
-Options:
-  -s, --skill <name>   Sync a named skill (repeatable; overrides groups)
-      --git            Download via Git sparse checkout (default)
-      --fetch          Download via HTTPS archive (exclusive with --git)
-${SKILL_GROUPS.map((group) => `      --${group.padEnd(13)} Sync the ${group} skill group`).join('\n')}
-  -h, --help           Show this help
-
-With no selection option, all configured skills are updated.
-
-Skills:
-${SKILL_SOURCES.map(
-  (source) =>
-    `  ${source.skill.padEnd(18)} [${source.groups.join(', ')}] ${formatSkillTreeUrl(source)}`,
-).join('\n')}
-
-npm examples:
-  npm run upgrade:skill
-  npm run upgrade:skill -- --fetch
-  npm run upgrade:skill -- --skill frontend-design
-  npm run upgrade:skill -- --git --skill frontend-design
-  npm run upgrade:skill -- --design
-  npm run upgrade:design
-  npm run upgrade:tool
-`;
 
 const RM_OPTIONS = Object.freeze({
   recursive: true,
@@ -335,7 +97,7 @@ export const getFileMode = ({
 };
 
 /**
- * 判断目录名是否为 `mkdtemp` 生成的 skill 升级工作目录，
+ * 判断目录名是否为 `mkdtemp` 生成的升级工作目录，
  * 例如 `.frontend-design-upgrade-oizzQ5`。
  *
  * @param {string} name
@@ -349,10 +111,10 @@ const removeDir = async (target, rm = fs.promises.rm) => {
 };
 
 /**
- * 删除 `skills/` 下残留的 `.<skill>-upgrade-*` 临时目录。
+ * 删除根目录下残留的 `.<name>-upgrade-*` 临时目录。
  *
  * 在整次升级结束后调用，覆盖单次同步失败、中断或 Windows 文件锁导致
- * `finally` 未能删净的情况；不会删除正式 skill 目录。
+ * `finally` 未能删净的情况；不会删除正式镜像目录。
  *
  * @param {string} root
  * @param {{
@@ -444,33 +206,7 @@ const filesEqual = async (left, right) => {
 };
 
 /**
- * 在暂存区递归移除 superpower 组 Markdown 中的技能命名空间前缀。
- *
- * @param {string} stagingDir
- * @param {typeof SKILL_SOURCES[number]} source
- * @returns {Promise<void>}
- */
-export const postProcessSkill = async (stagingDir, source) => {
-  if (!source.groups.includes('superpower')) return;
-
-  const walk = async (directory) => {
-    const entries = await fs.promises.readdir(directory, { withFileTypes: true });
-    for (const entry of entries) {
-      const filename = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        await walk(filename);
-      } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        const content = await fs.promises.readFile(filename, 'utf8');
-        const processed = content.replaceAll('superpowers:', '');
-        if (processed !== content) await fs.promises.writeFile(filename, processed);
-      }
-    }
-  };
-  await walk(stagingDir);
-};
-
-/**
- * 将远端下载经后处理后安全替换为本地 skill 镜像。
+ * 将远端下载经后处理后安全替换为本地镜像。
  *
  * @param {{
  *   localDir: string,
@@ -478,16 +214,19 @@ export const postProcessSkill = async (stagingDir, source) => {
  *   postProcess?: (stagingDir: string) => Promise<void>,
  *   onDetail?: (detail: { mode: 'U' | 'M' | 'D', path: string }) => void,
  *   rename?: (source: string, destination: string) => Promise<void>,
+ *   rm?: typeof fs.promises.rm,
+ *   noun?: string,
  * }} options
  * @returns {Promise<{ fileCount: number }>}
  */
-export const syncSkillMirror = async ({
+export const syncMirror = async ({
   localDir,
   download,
   postProcess = async () => {},
   onDetail = () => { },
   rename = fs.promises.rename,
   rm = fs.promises.rm,
+  noun = 'Skill',
 }) => {
   const localFiles = await collectRelativeFiles(localDir);
   const parentDir = path.dirname(localDir);
@@ -540,7 +279,7 @@ export const syncSkillMirror = async ({
       } catch (rollbackError) {
         throw new AggregateError(
           [error, rollbackError],
-          `Skill swap and rollback failed; backup was at ${backupDir}`,
+          `${noun} swap and rollback failed; backup was at ${backupDir}`,
         );
       }
     }
@@ -581,18 +320,25 @@ const downloadRepositoryArchive = async ({ repositoryUrl, ref }, archiveDir, fet
 };
 
 /**
- * 从已下载的归档中校验并提取单个 skill 到暂存目录。
+ * 从已下载的归档中校验并提取单个路径到暂存目录。
+ * `requiredFile` 为 `null` 时只要求该路径在归档中存在。
  *
  * @param {string} archiveFile
  * @param {string} remotePath
  * @param {string} stagingDir
+ * @param {{ requiredFile?: string | null }} [options]
  * @returns {Promise<void>}
  */
-const extractSkillFromArchive = async (archiveFile, remotePath, stagingDir) => {
+const extractFromArchive = async (
+  archiveFile,
+  remotePath,
+  stagingDir,
+  { requiredFile = 'SKILL.md' } = {},
+) => {
   const { t: listTar, x: extractTar } = await loadTar();
   const prefix = remotePath + '/';
   const selected = new Set();
-  let hasSkill = false;
+  let hasMarker = false;
   let validationError;
   // Inspect before extraction so invalid members cannot produce a partial mirror.
   await listTar({ file: archiveFile, strict: true, onReadEntry: (entry) => {
@@ -613,10 +359,16 @@ const extractSkillFromArchive = async (archiveFile, remotePath, stagingDir) => {
       return;
     }
     selected.add(entry.path);
-    if (relative === prefix + 'SKILL.md' && entry.type === 'File') hasSkill = true;
+    if (requiredFile && relative === prefix + requiredFile && entry.type === 'File') {
+      hasMarker = true;
+    }
   } });
   if (validationError) throw validationError;
-  if (!hasSkill) throw new Error('Missing upstream SKILL.md: ' + remotePath);
+  if (requiredFile) {
+    if (!hasMarker) throw new Error('Missing upstream ' + requiredFile + ': ' + remotePath);
+  } else if (selected.size === 0) {
+    throw new Error('Missing upstream path: ' + remotePath);
+  }
   await extractTar({
     file: archiveFile,
     cwd: stagingDir,
@@ -628,18 +380,18 @@ const extractSkillFromArchive = async (archiveFile, remotePath, stagingDir) => {
 };
 
 /**
- * 用 fetch 下载 GitHub 分支源码归档，由 tar 校验并提取目标 skill。
+ * 用 fetch 下载 GitHub 分支源码归档，由 tar 校验并提取目标路径。
  * 不调用 GitHub API，不依赖本机 Git 或 tar 命令。
  *
  * @param {{ repo: string, path: string, ref: string }} source
- * @param {{ fetchImpl?: typeof fetch }} options
+ * @param {{ fetchImpl?: typeof fetch, requiredFile?: string | null, noun?: string }} [options]
  * @returns {(stagingDir: string) => Promise<void>}
  */
 export const createHttpsDownloader = (
   source,
-  { fetchImpl = fetch } = {},
+  { fetchImpl = fetch, requiredFile = 'SKILL.md', noun = 'skill' } = {},
 ) => {
-  const { repositoryUrl, remotePath, ref } = resolveRepository(source);
+  const { repositoryUrl, remotePath, ref } = resolveRepository(source, { noun });
 
   return async (stagingDir) => {
     const archiveDir = await fs.promises.mkdtemp(path.join(path.dirname(stagingDir), 'archive-'));
@@ -647,7 +399,7 @@ export const createHttpsDownloader = (
       const archiveFile = await downloadRepositoryArchive(
         { repositoryUrl, ref }, archiveDir, fetchImpl,
       );
-      await extractSkillFromArchive(archiveFile, remotePath, stagingDir);
+      await extractFromArchive(archiveFile, remotePath, stagingDir, { requiredFile });
     } finally {
       await removeDir(archiveDir);
     }
@@ -677,7 +429,6 @@ export const runGit = (args, { spawnImpl = spawn } = {}) =>
 
 /**
  * 共享下载会话中单个仓库工作目录名：`owner-repo`，非 main 时追加 ref。
- * 不按 skill 命名，以便同仓库多 skill 共用一目了然的目录。
  *
  * @param {{ repositoryUrl: string, ref: string }} repository
  * @returns {string}
@@ -703,32 +454,50 @@ const checkoutGitRepository = async ({ repositoryUrl, ref, paths }, repositoryDi
   return repositoryDir;
 };
 
-/** 验证单个 skill 后按其 path 复制到独立暂存区。 */
-const copyGitSkill = async (repositoryDir, remotePath, stagingDir) => {
+/** 校验目标路径后复制到独立暂存区。 */
+const copyRemotePath = async (
+  repositoryDir,
+  remotePath,
+  stagingDir,
+  { requiredFile = 'SKILL.md' } = {},
+) => {
   const sourceDir = path.join(repositoryDir, ...remotePath.split('/'));
-  const skillFile = await fs.promises.stat(path.join(sourceDir, 'SKILL.md')).catch((error) => {
-    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
-      throw new Error('Missing upstream SKILL.md: ' + remotePath);
-    }
-    throw error;
-  });
-  if (!skillFile.isFile()) throw new Error('Missing upstream SKILL.md: ' + remotePath);
+  if (requiredFile) {
+    const markerFile = await fs.promises.stat(path.join(sourceDir, requiredFile)).catch((error) => {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+        throw new Error('Missing upstream ' + requiredFile + ': ' + remotePath);
+      }
+      throw error;
+    });
+    if (!markerFile.isFile()) throw new Error('Missing upstream ' + requiredFile + ': ' + remotePath);
+  } else {
+    const sourceStat = await fs.promises.stat(sourceDir).catch((error) => {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
+        throw new Error('Missing upstream path: ' + remotePath);
+      }
+      throw error;
+    });
+    if (!sourceStat.isDirectory()) throw new Error('Missing upstream path: ' + remotePath);
+  }
   await fs.promises.cp(sourceDir, stagingDir, { recursive: true, force: true });
 };
 
 /**
- * 单技能浅层稀疏下载；检出目录由调用方的升级工作目录负责清理。
+ * 单路径浅层稀疏下载；检出目录由调用方的升级工作目录负责清理。
  *
  * @param {{ repo: string, path: string, ref: string }} source
- * @param {{ run?: typeof runGit }} options
+ * @param {{ run?: typeof runGit, requiredFile?: string | null, noun?: string }} [options]
  * @returns {(stagingDir: string) => Promise<void>}
  */
-export const createGitSparseDownloader = (source, { run = runGit } = {}) => {
-  const resolved = resolveRepository(source);
+export const createGitSparseDownloader = (
+  source,
+  { run = runGit, requiredFile = 'SKILL.md', noun = 'skill' } = {},
+) => {
+  const resolved = resolveRepository(source, { noun });
   return async (stagingDir) => {
     const repositoryDir = path.join(path.dirname(stagingDir), 'repository');
     await checkoutGitRepository({ ...resolved, paths: [resolved.remotePath] }, repositoryDir, run);
-    await copyGitSkill(repositoryDir, resolved.remotePath, stagingDir);
+    await copyRemotePath(repositoryDir, resolved.remotePath, stagingDir, { requiredFile });
   };
 };
 
@@ -736,24 +505,27 @@ export const createGitSparseDownloader = (source, { run = runGit } = {}) => {
  * 按仓库和 ref 合并所选 path，共享一次 acquire，再分别 materialize。
  * acquire 结果（含失败）通过 Promise 复用；全部消费者结束后调用 cleanup。
  *
- * @param {typeof SKILL_SOURCES} sources
+ * @param {object[]} sources
  * @param {{
- *   root?: string,
+ *   root: string,
  *   workDirPrefix: string,
  *   label: string,
  *   acquire: (repository: object, workPath: string) => Promise<unknown>,
  *   materialize: (acquired: unknown, remotePath: string, stagingDir: string) => Promise<void>,
+ *   noun?: string,
+ *   nameKey?: string,
  * }} options
- * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ * @returns {Promise<{ download: (source: object, stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
  */
 const createDownloadSession = async (
   sources,
-  { root = skillsRoot, workDirPrefix, label, acquire, materialize },
+  { root, workDirPrefix, label, acquire, materialize, noun = 'skill', nameKey = 'skill' },
 ) => {
+  if (!root) throw new Error('Download session requires a root directory');
   const repositories = new Map();
   const keyOf = ({ repositoryUrl, ref }) => JSON.stringify([repositoryUrl, ref]);
   for (const source of sources) {
-    const parsed = resolveRepository(source);
+    const parsed = resolveRepository(source, { noun });
     const key = keyOf(parsed);
     if (!repositories.has(key)) repositories.set(key, { ...parsed, paths: new Set() });
     repositories.get(key).paths.add(parsed.remotePath);
@@ -762,10 +534,10 @@ const createDownloadSession = async (
   const workDir = await fs.promises.mkdtemp(path.join(root, workDirPrefix));
   return {
     download: async (source, stagingDir) => {
-      const parsed = resolveRepository(source);
+      const parsed = resolveRepository(source, { noun });
       const repository = repositories.get(keyOf(parsed));
       if (!repository || !repository.paths.has(parsed.remotePath)) {
-        throw new Error(`Skill not selected for ${label} download: ${source.skill}`);
+        throw new Error(`${titleNoun(noun)} not selected for ${label} download: ${source[nameKey]}`);
       }
       repository.ready ??= acquire(
         repository,
@@ -780,60 +552,86 @@ const createDownloadSession = async (
 /**
  * 为一次升级共享 HTTPS 归档：按仓库和 ref 合并路径，每组只下载一次 `.tar.gz`。
  *
- * @param {typeof SKILL_SOURCES} sources
- * @param {{ root?: string, fetchImpl?: typeof fetch }} options
- * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ * @param {object[]} sources
+ * @param {{
+ *   root: string,
+ *   fetchImpl?: typeof fetch,
+ *   requiredFile?: string | null,
+ *   noun?: string,
+ *   nameKey?: string,
+ * }} [options]
+ * @returns {Promise<{ download: (source: object, stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
  */
 export const createHttpsDownloadSession = (
   sources,
-  { root = skillsRoot, fetchImpl = fetch } = {},
+  { root, fetchImpl = fetch, requiredFile = 'SKILL.md', noun = 'skill', nameKey = 'skill' } = {},
 ) => createDownloadSession(sources, {
   root,
   workDirPrefix: '.archives-upgrade-',
   label: 'HTTPS',
+  noun,
+  nameKey,
   acquire: (repository, dir) => downloadRepositoryArchive(repository, dir, fetchImpl),
-  materialize: extractSkillFromArchive,
+  materialize: (archiveFile, remotePath, stagingDir) =>
+    extractFromArchive(archiveFile, remotePath, stagingDir, { requiredFile }),
 });
 
 /**
  * 为一次升级共享 Git 检出：按仓库和 ref 合并路径，每组只克隆一次。
  *
- * @param {typeof SKILL_SOURCES} sources
- * @param {{ root?: string, run?: typeof runGit }} options
- * @returns {Promise<{ download: (source: typeof SKILL_SOURCES[number], stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
+ * @param {object[]} sources
+ * @param {{
+ *   root: string,
+ *   run?: typeof runGit,
+ *   requiredFile?: string | null,
+ *   noun?: string,
+ *   nameKey?: string,
+ * }} [options]
+ * @returns {Promise<{ download: (source: object, stagingDir: string) => Promise<void>, cleanup: () => Promise<void> }>}
  */
 export const createGitDownloadSession = (
   sources,
-  { root = skillsRoot, run = runGit } = {},
+  { root, run = runGit, requiredFile = 'SKILL.md', noun = 'skill', nameKey = 'skill' } = {},
 ) => createDownloadSession(sources, {
   root,
   workDirPrefix: '.repositories-upgrade-',
   label: 'Git',
+  noun,
+  nameKey,
   acquire: (repository, dir) => checkoutGitRepository(repository, dir, run),
-  materialize: copyGitSkill,
+  materialize: (repositoryDir, remotePath, stagingDir) =>
+    copyRemotePath(repositoryDir, remotePath, stagingDir, { requiredFile }),
 });
 
 /**
- * 将上游完整下载经后处理后安全同步为本地 skill 镜像。
+ * 将一个已配置条目同步到根目录下的同名镜像。
  *
- * @param {typeof SKILL_SOURCES[number]} source
- * @param {(detail: string | { mode: 'U' | 'M' | 'D', path: string }) => void} onDetail
- * @param {{ git?: boolean, download?: (stagingDir: string) => Promise<void> }} options
+ * @param {object} source
+ * @param {(detail: { mode: 'U' | 'M' | 'D', path: string }) => void} onDetail
+ * @param {{
+ *   rootDir: string,
+ *   nameKey: string,
+ *   download: (stagingDir: string) => Promise<void>,
+ *   postProcess?: (stagingDir: string, source: object) => Promise<void>,
+ *   noun?: string,
+ * }} options
  * @returns {Promise<{ durationMs: number, fileCount: number }>}
  */
-const syncSkill = async (source, onDetail, { git = true, download } = {}) => {
+export const syncConfiguredItem = async (source, onDetail, {
+  rootDir,
+  nameKey,
+  download,
+  postProcess = async () => {},
+  noun = 'Skill',
+}) => {
   const startedAt = Date.now();
-  const createDownloader = git ? createGitSparseDownloader : createHttpsDownloader;
-  download ??= createDownloader(source);
-  const localDir = path.join(skillsRoot, source.skill);
-
-  const { fileCount } = await syncSkillMirror({
-    localDir,
+  const { fileCount } = await syncMirror({
+    localDir: path.join(rootDir, source[nameKey]),
     download,
-    postProcess: (stagingDir) => postProcessSkill(stagingDir, source),
+    postProcess: (stagingDir) => postProcess(stagingDir, source),
     onDetail,
+    noun,
   });
-
   return { durationMs: Date.now() - startedAt, fileCount };
 };
 
@@ -846,33 +644,34 @@ const SILENT_REPORTER = {
 };
 
 /**
- * 并行更新互相独立的 skills，并在全部任务结束后汇总失败。
+ * 并行更新互相独立的条目，并在全部任务结束后汇总失败。
  *
- * @param {typeof SKILL_SOURCES[number][]} sources
- * @param {(source: typeof SKILL_SOURCES[number], onDetail: (message: string) => void) => Promise<{ durationMs: number, fileCount: number }>} worker
- * @param {ReturnType<typeof createUpgradeReporter>} reporter
- * @param {{ skillsRoot?: string }} [options]
+ * @param {object[]} sources
+ * @param {(source: object, onDetail: (message: unknown) => void) => Promise<{ durationMs: number, fileCount: number }>} worker
+ * @param {{ start: Function, detail: Function, pass: Function, fail: Function, finish: Function }} [reporter]
+ * @param {{ root: string, nameKey: string }} options
  * @returns {Promise<void>}
  */
-export const syncSkillsConcurrently = async (
+export const syncItemsConcurrently = async (
   sources,
-  worker = syncSkill,
+  worker,
   reporter = SILENT_REPORTER,
-  { skillsRoot: cleanupRoot = skillsRoot } = {},
+  { root, nameKey },
 ) => {
   let results;
   try {
     results = await Promise.allSettled(sources.map(async (source) => {
-      reporter.start(source.skill);
+      const name = source[nameKey];
+      reporter.start(name);
       try {
         const result = await worker(
           source,
-          (message) => reporter.detail(source.skill, message),
+          (message) => reporter.detail(name, message),
         );
-        reporter.pass(source.skill, result);
+        reporter.pass(name, result);
         return result;
       } catch (error) {
-        reporter.fail(source.skill, error);
+        reporter.fail(name, error);
         throw error;
       }
     }));
@@ -880,16 +679,13 @@ export const syncSkillsConcurrently = async (
     try {
       reporter.finish();
     } finally {
-      await cleanupUpgradeWorkDirs(cleanupRoot);
+      await cleanupUpgradeWorkDirs(root);
     }
   }
 
   const failures = results.flatMap((result, index) =>
     result.status === 'rejected'
-      ? [
-        `${sources[index].skill}: ${result.reason?.message || result.reason
-        }`,
-      ]
+      ? [`${sources[index][nameKey]}: ${result.reason?.message || result.reason}`]
       : [],
   );
 
@@ -899,12 +695,188 @@ export const syncSkillsConcurrently = async (
 };
 
 /**
- * 执行通用 skill 更新 CLI。
+ * 解析 `--git` / `--fetch`、重复的选择项和分组选项。
  *
- * @param {string[]} argv 不包含 Node 与脚本路径的参数列表
+ * @param {{ groups: string[], selectFlag: string, selectShort: string }} options
+ * @returns {(argv: string[]) => { help: boolean, git: boolean, groups: string[] }}
+ */
+export const createArgumentParser = ({ groups, selectFlag, selectShort }) => {
+  const namesKey = `${selectFlag.slice(2)}s`;
+  return (argv) => {
+    const result = { help: false, git: true, [namesKey]: [], groups: [] };
+    let transport;
+
+    for (let i = 0; i < argv.length; i += 1) {
+      const arg = argv[i];
+
+      if (arg === '--git' || arg === '--fetch') {
+        if (transport && transport !== arg) {
+          throw new Error('--fetch and --git are mutually exclusive');
+        }
+        transport = arg;
+        result.git = arg === '--git';
+        continue;
+      }
+
+      if (arg === '--help' || arg === '-h') {
+        result.help = true;
+        continue;
+      }
+
+      if (arg === selectFlag || arg === selectShort) {
+        const value = argv[++i];
+        if (!value) {
+          throw new Error(`Missing value for ${selectFlag}`);
+        }
+        result[namesKey].push(value);
+        continue;
+      }
+
+      const equalsPrefix = `${selectFlag}=`;
+      if (arg.startsWith(equalsPrefix)) {
+        const value = arg.slice(equalsPrefix.length);
+        if (!value) {
+          throw new Error(`Missing value for ${selectFlag}`);
+        }
+        result[namesKey].push(value);
+        continue;
+      }
+
+      if (arg.startsWith('--') && groups.includes(arg.slice(2))) {
+        result.groups.push(arg.slice(2));
+        continue;
+      }
+
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+
+    return result;
+  };
+};
+
+/**
+ * 按名称或分组从目录中选择条目。名称优先于分组；两者都空时返回全部。
+ *
+ * @param {object[]} catalog
+ * @param {{ nameKey: string, namesKey: string, noun: string }} options
+ */
+export const createSourceSelector = (catalog, { nameKey, namesKey, noun }) =>
+  (args) => {
+    const names = args[namesKey];
+    const { groups } = args;
+    if (names.length > 0) {
+      const unknown = names.filter(
+        (name) => !catalog.some((source) => source[nameKey] === name),
+      );
+
+      if (unknown.length > 0) {
+        throw new Error(`unknown ${noun}(s): ${[...new Set(unknown)].join(', ')}`);
+      }
+
+      return catalog.filter((source) => names.includes(source[nameKey]));
+    }
+
+    if (groups.length === 0) {
+      return [...catalog];
+    }
+
+    return catalog.filter(({ groups: sourceGroups }) =>
+      sourceGroups.some((group) => groups.includes(group)),
+    );
+  };
+
+/** 仅用于帮助文本：把配置展示成可打开的 GitHub tree 页面。 */
+export const formatTreeUrl = ({ repo, path: remotePath, ref }) =>
+  `${repo}/tree/${ref}/${remotePath}`;
+
+/**
+ * 生成由集中配置派生的 CLI 帮助文本。
+ *
+ * @param {{
+ *   scriptPath: string,
+ *   selectOptionLine: string,
+ *   groups: string[],
+ *   groupNoun: string,
+ *   catalogNoun: string,
+ *   emptySelectionNoun: string,
+ *   catalog: object[],
+ *   nameKey: string,
+ *   npmExamples: string[],
+ * }} options
+ * @returns {string}
+ */
+export const formatUpgradeHelp = ({
+  scriptPath,
+  selectOptionLine,
+  groups,
+  groupNoun,
+  catalogNoun,
+  emptySelectionNoun,
+  catalog,
+  nameKey,
+  npmExamples,
+}) => {
+  const groupLines = groups
+    .map((group) => `      --${group.padEnd(13)} Sync the ${group} ${groupNoun} group`)
+    .join('\n');
+  const catalogLines = catalog
+    .map((source) =>
+      `  ${String(source[nameKey]).padEnd(18)} [${source.groups.join(', ')}] ${formatTreeUrl(source)}`)
+    .join('\n');
+  return `Usage: node ${scriptPath} [options]
+
+Options:
+  ${selectOptionLine}
+      --git            Download via Git sparse checkout (default)
+      --fetch          Download via HTTPS archive (exclusive with --git)
+${groupLines}
+  -h, --help           Show this help
+
+With no selection option, all configured ${emptySelectionNoun} are updated.
+
+${catalogNoun}:
+${catalogLines}
+
+npm examples:
+${npmExamples.map((example) => `  ${example}`).join('\n')}
+`;
+};
+
+/**
+ * 执行一次升级 CLI：解析参数、共享下载、并行镜像、报告和清理。
+ *
+ * @param {{
+ *   argv?: string[],
+ *   rootDir: string,
+ *   projectRoot: string,
+ *   formatHelp: () => string,
+ *   parseArgs: (argv: string[]) => { help: boolean, git: boolean },
+ *   selectSources: (args: object) => object[],
+ *   nameKey: string,
+ *   noun?: string,
+ *   plural: string,
+ *   postProcess?: (stagingDir: string, source: object) => Promise<void>,
+ *   requiredFile?: string | null,
+ *   doneMessage: string,
+ *   createReporter: (sources: object[]) => { start: Function, detail: Function, pass: Function, fail: Function, finish: Function },
+ * }} options
  * @returns {Promise<void>}
  */
-export const runCli = async (argv = process.argv.slice(2)) => {
+export const runUpgradeCli = async ({
+  argv = process.argv.slice(2),
+  rootDir,
+  projectRoot,
+  formatHelp,
+  parseArgs,
+  selectSources,
+  nameKey,
+  noun = nameKey,
+  plural,
+  postProcess = async () => {},
+  requiredFile = 'SKILL.md',
+  doneMessage,
+  createReporter,
+}) => {
   let selected;
   let args;
   try {
@@ -917,13 +889,13 @@ export const runCli = async (argv = process.argv.slice(2)) => {
 
     selected = selectSources(args);
     if (selected.length === 0) {
-      throw new Error('no skills selected.');
+      throw new Error(`no ${plural} selected.`);
     }
   } catch (error) {
     console.error(`Error: ${error.message}\n`);
     console.log(formatHelp());
     process.exitCode = 1;
-    await cleanupUpgradeWorkDirs(skillsRoot);
+    await cleanupUpgradeWorkDirs(rootDir);
     return;
   }
 
@@ -932,32 +904,30 @@ export const runCli = async (argv = process.argv.slice(2)) => {
 
   let downloadSession;
   try {
+    const sessionOptions = { root: rootDir, requiredFile, noun, nameKey };
     downloadSession = args.git
-      ? await createGitDownloadSession(selected)
-      : await createHttpsDownloadSession(selected);
-    await syncSkillsConcurrently(
+      ? await createGitDownloadSession(selected, sessionOptions)
+      : await createHttpsDownloadSession(selected, sessionOptions);
+    await syncItemsConcurrently(
       selected,
-      (source, onDetail) => syncSkill(source, onDetail, {
-        git: args.git,
+      (source, onDetail) => syncConfiguredItem(source, onDetail, {
+        rootDir,
+        nameKey,
+        noun: titleNoun(noun),
         download: (stagingDir) => downloadSession.download(source, stagingDir),
+        postProcess,
       }),
-      createUpgradeReporter(selected),
+      createReporter(selected),
+      { root: rootDir, nameKey },
     );
 
     console.log();
-    console.log('Upgrade skills done');
+    console.log(doneMessage);
   } finally {
     try {
       await downloadSession?.cleanup();
     } finally {
-      await cleanupUpgradeWorkDirs(skillsRoot);
+      await cleanupUpgradeWorkDirs(rootDir);
     }
   }
 };
-
-if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
-  runCli().catch((error) => {
-    console.error(error.message || error);
-    process.exitCode = 1;
-  });
-}

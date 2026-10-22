@@ -8,8 +8,8 @@
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/*.mjs` use `import` and modern `fs` APIs)
-- Skill upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
+- [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/**/*.mjs` use `import` and modern `fs` APIs)
+- Skill and rule upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
 - Default `--git` upgrades do not load `tar`. `--fetch` loads that development dependency only when extracting an archive; install it with `npm install --ignore-scripts` before using `--fetch`. Build and deploy scripts use only Node standard libraries. A regular install also runs `prepare` → `init:darwin` (`npx skills add alchaincyf/darwin-skill`); use `npm run init:darwin` separately when that skill is wanted.
 - **Deploy on Windows**: Git Bash or another `bash` on `PATH` is only needed for hook scripts, not for `npm run deploy`
 
@@ -28,8 +28,8 @@
 | `npm run deploy:claude` | `npm run deploy -- -t claude` |
 | `npm run deploy:qcode` | `npm run deploy -- -t qcode` |
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
-| `npm run upgrade:skill` | `node scripts/upgrade-skill.mjs` |
-| `npm run upgrade:design` | `node scripts/upgrade-skill.mjs --design` |
+| `npm run upgrade:skill` | `node scripts/upgrade/skill.mjs` |
+| `npm run upgrade:rule` | `node scripts/upgrade/rule.mjs` |
 | `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
 
 ```bash
@@ -44,7 +44,7 @@ npm run deploy:project "D:/my project"
 
 `deploy` links existing resource directories into `~/.cursor`, `~/.codex`, `~/.claude`, `~/.q-code`, or `~/.agents` by default. Codex links only `skills/`. `agent` uses the same resources as Cursor and writes them under `~/.agents/` (for example `~/.agents/skills`). Missing directories are skipped. `--mode local` uses the corresponding directory under the current working directory (for example `.cursor/` or `.agents/`). These commands deploy resource links, not plugin manifests or hooks. Use the double dash form when npm swallows flags.
 
-`upgrade:skill` updates all 14 configured upstream skills by default. Repeat `--skill <name>` to select specific skills; named selections override valid group flags. Multiple group flags select their union. `upgrade:design` is the shortcut for `--design`. Omitting transport flags is equivalent to `--git`; `--fetch` downloads the HTTPS branch archive for each selected skill's `ref`. The two transport flags are mutually exclusive and do not affect skill selection.
+`upgrade:skill` updates all 14 configured upstream skills by default. Repeat `--skill <name>` to select specific skills; named selections override valid group flags. Multiple group flags select their union. The design pair is `--design`. Omitting transport flags is equivalent to `--git`; `--fetch` downloads the HTTPS branch archive for each selected skill's `ref`. The two transport flags are mutually exclusive and do not affect skill selection.
 
 | Selection | Upstream skills |
 | --------- | --------------- |
@@ -54,7 +54,7 @@ npm run deploy:project "D:/my project"
 | `--design` | `frontend-design`, `ui-ux-pro-max` |
 | `--superpower` | `brainstorming`, `writing-plans`, `test-driven-development`, `systematic-debugging`, `requesting-code-review`, `receiving-code-review`, `verification-before-completion` |
 
-**Current CLI limitations:** `package.json` and CLI help still advertise `upgrade:tool`, but its `--tool` flag fails with `Unknown argument: --tool`. To update the former pair, use `npm run upgrade:skill -- --skill grilling --skill hatch-pet`. Help also lists a `--skill` group flag that collides with the named-skill option; use `--skill skill-forge` explicitly.
+**Current CLI limitations:** Help examples still list `npm run upgrade:design` and `npm run upgrade:tool`. Neither script is in `package.json`. `--tool` is not a group and fails with `Unknown argument: --tool`. Use `npm run upgrade:skill -- --design` for the design pair, and `npm run upgrade:skill -- --skill grilling --skill hatch-pet` for the former tool pair. Help also lists a `--skill` group that collides with the named-skill option; use `--skill skill-forge`.
 
 ```bash
 npm run upgrade:skill                                      # Git (default)
@@ -66,7 +66,9 @@ npm run upgrade:skill -- --superpower                     # Superpowers group
 
 When multiple skills run concurrently, interactive terminals show an independent detail block for each skill: live updates may roll when space is tight, but finished panels keep every `U`/`M`/`D` file line. CI and redirected output automatically use append-only lines prefixed with the skill name. Shared download work directories under `.archives-upgrade-*` / `.repositories-upgrade-*` are named by repository (`owner-repo`); a ref other than `main` is appended.
 
-[`SKILL_SOURCES`](scripts/upgrade-skill.mjs) defines `{ skill, repo, path, ref, groups }`. `ref` is the branch to download; every configured skill currently uses `main`. Help displays `<repo>/tree/<ref>/<path>`. Downloads read `repo`, `path`, and `ref` directly and group selected paths by repository and ref. The reporter uses the configured `repo`.
+[`SKILL_SOURCES`](scripts/skills.json) is loaded by [`scripts/upgrade/skill.mjs`](scripts/upgrade/skill.mjs) and defines `{ skill, repo, path, ref, groups }`. `ref` is the branch to download; every configured skill currently uses `main`. Help displays `<repo>/tree/<ref>/<path>`. Downloads read `repo`, `path`, and `ref` directly and group selected paths by repository and ref. The reporter uses the configured `repo`.
+
+[`RULE_SOURCES`](scripts/rules.json) is loaded by [`scripts/upgrade/rule.mjs`](scripts/upgrade/rule.mjs) and defines `{ rule, repo, path, ref, groups }`. It uses the same transports. `npm run upgrade:rule` writes each selected rule to `rules/<name>/`. Download and reporting are shared by [`download.mjs`](scripts/upgrade/download.mjs) and [`report.mjs`](scripts/upgrade/report.mjs). The rule catalog is empty until entries are added; an empty catalog exits because no rules are selected, and does not create `rules/`. A rule path must be a directory. Rules do not require `SKILL.md` and do not strip `superpowers:`.
 
 ```text
 selected skills → group by repository + ref
@@ -85,11 +87,10 @@ For the `superpower` group, post-processing recursively removes every literal `s
 Run from the repository root:
 
 ```bash
-node --test scripts/deploy.test.mjs
-node --test scripts/upgrade-skill.test.mjs
+node --test scripts/deploy/deploy.test.mjs
 ```
 
-These suites use temporary projects; upgrade tests use offline archives and local Git repositories. After deployment changes, also exercise `npm run deploy:project "<temporary project>"` for existing-content protection and repeat runs. Skill behavior scenarios in `skills/**/test-prompts.json` are local, Git-ignored inventories, not automated test runners. See [AGENTS.md](AGENTS.md) for scoped regression requirements.
+The deploy suite uses temporary projects. After deployment changes, also exercise `npm run deploy:project "<temporary project>"` for existing-content protection and repeat runs. Upgrade script tests are not in this checkout. Skill behavior scenarios in `skills/**/test-prompts.json` are local, Git-ignored inventories, not automated test runners. See [AGENTS.md](AGENTS.md) for scoped regression requirements.
 
 ---
 
@@ -122,6 +123,12 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `test-helper` | Repair stale tests or add requested coverage; preserve regressions, scoped prerequisites and cleanup on failure, and report unverified work |
 | `review-helper` | Scoped P0–P3 review and repair; preserves user changes, verifies the reviewed snapshot in isolation when needed, and reports blockers |
 | `doc-helper` | Scoped documentation from code; preserves language, verifies evidence, and distinguishes throws, rejections, and error fallbacks |
+| `coding-common` | Write or change code in the target repository's existing style; default rules live inside the skill and cover immutability, errors, boundary validation, tests-first, and a pre-completion review |
+| `coding-typescript` | Write or change TypeScript/JavaScript code; runs installed **coding-common** first, then applies language defaults for types, Zod, error narrowing, and React props |
+| `coding-java` | Write or change `.java` files; runs installed **coding-common** first, then applies language defaults for naming, records/immutability, Optional, constructor injection, JUnit 5, and parameterized queries |
+| `coding-vue` | Write or change Vue SFCs and related Composition API modules; runs installed **coding-common** and **coding-typescript** first, then applies defaults for SFC structure, reactivity, composables, Pinia, routing, and component tests |
+| `dev-requirement` | Mints `dr-YYYY-MM-DD-<feature-name>`, runs installed **grilling**, **grilling-with-docs** (also needs **domain-modeling**), and **brainstorming**, writes `docs/<dr-id>/requirement.md` and `proposal.md`, asks before spawning a subagent, and implements only numbered confirmed behaviors |
+| `dev-debug` | Mints `dd-YYYY-MM-DD-<feature-name>`, runs installed **grilling** and **grilling-with-docs** (also needs **domain-modeling**), writes and updates `docs/<dd-id>/requirement.md`, asks before spawning a subagent, and fixes only numbered confirmed behaviors |
 | `reviewer` | Orchestrates installed **test-helper** → **review-helper** → **doc-helper** |
 | `skill-forge` | Create or update skills |
 | `skill-review` | Audit skill quality (used by `skiller`) |
@@ -131,8 +138,8 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | `agent-creator` | Create or incrementally update a project task Agent at `.agents/skills/agent-<name>/SKILL.md`; requires separately installed `grilling`, with supporting tools under the project root's `scripts/` |
 | `grilling-with-docs` | Clarify requirements and update agreed targets while preserving unrelated content; distinguish explicit full replacement, recover unreadable sources, load installed dependencies across runtimes, and reuse root `GLOSSARY.md` |
 | `designer` | Orchestrates **ui-ux-pro-max** + **frontend-design** for distinctive UI |
-| `frontend-design` | Upstream-mirrored visual design guidance (`upgrade:design`) |
-| `ui-ux-pro-max` | Upstream-mirrored UI/UX intelligence (`upgrade:design`) |
+| `frontend-design` | Upstream-mirrored visual design guidance (`--design`) |
+| `ui-ux-pro-max` | Upstream-mirrored UI/UX intelligence (`--design`) |
 | `grilling` | Upstream-mirrored plan stress-test interviews (`--mattpocock`) |
 | `writing-for-agents` | Upstream-mirrored guidance for agent-facing documents (`--mattpocock`) |
 | `hatch-pet` | Upstream-mirrored creation, validation, and packaging of Codex animated pets (`--pet`; uses installed `imagegen` for visual generation) |
@@ -168,9 +175,13 @@ The generator extracts each task step's inputs, decisions, actions, outputs, acc
 | ------------------------------------------- | ------------------------------------------------------------ |
 | `package.json`                              | Single source of truth for published metadata and npm scripts |
 | `scripts/build.mjs`                         | Syncs `package.json` into plugin JSON files                  |
-| `scripts/deploy.mjs`                        | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
-| `scripts/upgrade-skill.mjs`                 | Syncs upstream skills via Git (default) or `--fetch` archives |
-| `scripts/upgrade-skill-reporter.mjs`        | Terminal/CI reporter for parallel skill upgrades             |
+| `scripts/deploy/deploy.mjs`                 | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
+| `scripts/skills.json`                       | Upstream skill catalog loaded as `SKILL_SOURCES`             |
+| `scripts/rules.json`                        | Upstream rule catalog loaded as `RULE_SOURCES` (currently empty) |
+| `scripts/upgrade/skill.mjs`                 | Syncs `skills.json` into `skills/<name>/`                    |
+| `scripts/upgrade/rule.mjs`                  | Syncs `rules.json` into `rules/<name>/`                      |
+| `scripts/upgrade/download.mjs`              | Shared Git/`--fetch` download, mirror swap, and CLI helpers  |
+| `scripts/upgrade/report.mjs`                | Terminal/CI reporter for parallel skill and rule upgrades    |
 | `commands/`                                 | Optional slash-command templates (currently absent)          |
 | `rules/`                                    | Optional agent rules (currently absent)                      |
 | `skills/`                                   | Tracked skills and Git-ignored upstream mirrors              |

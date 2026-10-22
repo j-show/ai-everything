@@ -9,12 +9,12 @@
  *
  * 用法：
  * ```bash
- * node scripts/deploy.mjs --type cursor [--mode user]
+ * node scripts/deploy/deploy.mjs --type cursor [--mode user]
  * npm run deploy:project <project dir>
  * npm run deploy -- --type cursor
  * ```
  *
- * @module scripts/deploy
+ * @module scripts/deploy/deploy
  */
 
 import fs from 'fs';
@@ -22,11 +22,11 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-/** 当前模块所在目录（`scripts/`），用于定位仓库根目录。 */
+/** 当前模块所在目录（`scripts/deploy/`），用于定位仓库根目录。 */
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** 仓库根目录（`scripts/` 的上一级）。所有源资源路径均相对此目录。 */
-const projectRoot = path.resolve(__dirname, '..');
+/** 仓库根目录（`scripts/deploy/` 的上两级）。所有源资源路径均相对此目录。 */
+const projectRoot = path.resolve(__dirname, '../..');
 
 /**
  * harness 类型与目标配置目录名的映射。
@@ -237,9 +237,9 @@ const parseArgs = (argv) => {
 
 /** 向 stdout 打印用法说明。 */
 const printHelp = () => {
-  console.log(`Usage: node scripts/deploy.mjs --type <cursor|codex|claude|qcode|agent> [--mode <user|local>]
+  console.log(`Usage: node scripts/deploy/deploy.mjs --type <cursor|codex|claude|qcode|agent> [--mode <user|local>]
        npm run deploy:project <project dir>
-       node scripts/deploy.mjs --type project <project dir>
+       node scripts/deploy/deploy.mjs --type project <project dir>
 
 Options:
   -t, --type <cursor|codex|claude|qcode|agent|project>  Harness type, or project (required)

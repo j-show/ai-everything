@@ -8,8 +8,8 @@
 
 ## 环境要求
 
-- [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/*.mjs` 使用 `import` 与现代 `fs` API）
-- Skill 升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
+- [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/**/*.mjs` 使用 `import` 与现代 `fs` API）
+- 技能和规则升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
 - 默认 `--git` 不加载 `tar`。`--fetch` 只在提取归档时加载该开发依赖；使用前运行 `npm install --ignore-scripts` 安装。构建和部署脚本只依赖 Node 标准库。常规安装还会执行 `prepare` → `init:darwin`（`npx skills add alchaincyf/darwin-skill`）；需要该技能时可单独执行 `npm run init:darwin`。
 - **在 Windows 上部署**：钩子脚本需要 Git Bash 或其它 `bash`；`npm run deploy` 本身不依赖 bash
 
@@ -28,8 +28,8 @@
 | `npm run deploy:claude` | `npm run deploy -- -t claude` |
 | `npm run deploy:qcode` | `npm run deploy -- -t qcode` |
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
-| `npm run upgrade:skill` | `node scripts/upgrade-skill.mjs` |
-| `npm run upgrade:design` | `node scripts/upgrade-skill.mjs --design` |
+| `npm run upgrade:skill` | `node scripts/upgrade/skill.mjs` |
+| `npm run upgrade:rule` | `node scripts/upgrade/rule.mjs` |
 | `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
 
 ```bash
@@ -44,7 +44,7 @@ npm run deploy:project "D:/my project"
 
 `deploy` 默认将现有资源目录链接到 `~/.cursor`、`~/.codex`、`~/.claude`、`~/.q-code` 或 `~/.agents`。Codex 只链接 `skills/`。`agent` 与 Cursor 部署相同资源，写入 `~/.agents/`（例如 `~/.agents/skills`）。缺失目录会跳过。`--mode local` 使用当前工作目录下对应目录（例如 `.cursor/` 或 `.agents/`）。这些命令只部署资源链接，不安装插件清单或钩子。若 npm 吞掉参数，请使用双横线形式。
 
-`upgrade:skill` 默认更新配置中的全部 14 个上游 skill。可重复指定 `--skill <name>` 选择多个技能，按名称选择时忽略合法分组选项；多个分组选项取并集。`upgrade:design` 是 `--design` 的快捷命令。不传下载参数等同于 `--git`；`--fetch` 按每个所选技能的 `ref` 下载 HTTPS 分支归档。两者互斥，不影响技能选择。
+`upgrade:skill` 默认更新配置中的全部 14 个上游 skill。可重复指定 `--skill <name>` 选择多个技能，按名称选择时忽略合法分组选项；多个分组选项取并集。设计分组是 `--design`。不传下载参数等同于 `--git`；`--fetch` 按每个所选技能的 `ref` 下载 HTTPS 分支归档。两者互斥，不影响技能选择。
 
 | 选择参数 | 上游技能 |
 | -------- | -------- |
@@ -54,7 +54,7 @@ npm run deploy:project "D:/my project"
 | `--design` | `frontend-design`、`ui-ux-pro-max` |
 | `--superpower` | `brainstorming`、`writing-plans`、`test-driven-development`、`systematic-debugging`、`requesting-code-review`、`receiving-code-review`、`verification-before-completion` |
 
-**当前 CLI 限制：** `package.json` 和 CLI 帮助仍列出 `upgrade:tool`，但其 `--tool` 参数会报 `Unknown argument: --tool`。若要更新原先的两个技能，使用 `npm run upgrade:skill -- --skill grilling --skill hatch-pet`。帮助中的分组 `--skill` 与按名称选择的选项重名，需明确使用 `--skill skill-forge`。
+**当前 CLI 限制：** 帮助示例仍列出 `npm run upgrade:design` 和 `npm run upgrade:tool`。`package.json` 里没有这两个脚本。`--tool` 不是分组，会报 `Unknown argument: --tool`。设计分组使用 `npm run upgrade:skill -- --design`；原先的两个技能使用 `npm run upgrade:skill -- --skill grilling --skill hatch-pet`。帮助中的分组 `--skill` 与按名称选择的选项重名，需使用 `--skill skill-forge`。
 
 ```bash
 npm run upgrade:skill                                      # 默认 Git
@@ -66,7 +66,9 @@ npm run upgrade:skill -- --superpower                     # Superpowers 分组
 
 并行更新多个 skill 时，交互式终端会为每个 skill 显示独立明细区：运行中空间不足时可滚动裁剪，完成后保留全部 `U`/`M`/`D` 文件行。CI 或重定向输出则自动使用带 skill 名前缀的逐行日志。共享下载工作目录位于 `.archives-upgrade-*` / `.repositories-upgrade-*` 下，按仓库命名（`owner-repo`）；`ref` 不是 `main` 时再附上分支名。
 
-[`SKILL_SOURCES`](scripts/upgrade-skill.mjs) 使用 `{ skill, repo, path, ref, groups }`。`ref` 是要下载的分支；当前每个技能都是 `main`。帮助展示 `<repo>/tree/<ref>/<path>`。下载直接读取 `repo`、`path` 和 `ref`，并按仓库和 ref 合并所选路径。报告器使用配置中的 `repo`。
+[`SKILL_SOURCES`](scripts/skills.json) 由 [`scripts/upgrade/skill.mjs`](scripts/upgrade/skill.mjs) 加载，字段为 `{ skill, repo, path, ref, groups }`。`ref` 是要下载的分支；当前每个技能都是 `main`。帮助展示 `<repo>/tree/<ref>/<path>`。下载直接读取 `repo`、`path` 和 `ref`，并按仓库和 ref 合并所选路径。报告器使用配置中的 `repo`。
+
+[`RULE_SOURCES`](scripts/rules.json) 由 [`scripts/upgrade/rule.mjs`](scripts/upgrade/rule.mjs) 加载，字段为 `{ rule, repo, path, ref, groups }`，下载方式与技能相同。`npm run upgrade:rule` 把所选规则写入 `rules/<name>/`。下载和报告由 [`download.mjs`](scripts/upgrade/download.mjs) 与 [`report.mjs`](scripts/upgrade/report.mjs) 共用。`RULE_SOURCES` 为空时，命令因没有可选规则而退出，且不创建 `rules/`。规则的 `path` 必须是目录，不要求 `SKILL.md`，也不删除 `superpowers:`。
 
 ```text
 所选技能 → 按仓库 + ref 分组
@@ -85,11 +87,10 @@ npm run upgrade:skill -- --superpower                     # Superpowers 分组
 在仓库根目录执行：
 
 ```bash
-node --test scripts/deploy.test.mjs
-node --test scripts/upgrade-skill.test.mjs
+node --test scripts/deploy/deploy.test.mjs
 ```
 
-测试使用临时项目；升级测试采用离线归档和本地 Git 仓库。修改部署行为后，还需用 `npm run deploy:project "<临时项目>"` 实测已有内容保护和重复执行。`skills/**/test-prompts.json` 是 Git 忽略的本地行为场景清单，不是自动测试运行器。各技能的回归要求见 [AGENTS.md](AGENTS.md)。
+部署测试使用临时项目。修改部署行为后，还需用 `npm run deploy:project "<临时项目>"` 实测已有内容保护和重复执行。当前检出没有升级脚本测试。`skills/**/test-prompts.json` 是 Git 忽略的本地行为场景清单，不是自动测试运行器。各技能的回归要求见 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -122,6 +123,12 @@ node --test scripts/upgrade-skill.test.mjs
 | `test-helper` | 修正过时测试或补齐指定覆盖，保留回归与运行前置步骤，验证失败路径清理并如实报告未验证项 |
 | `review-helper` | 限定范围的 P0–P3 审查与修复；保留用户改动，按需隔离验证被审查快照并说明阻塞 |
 | `doc-helper` | 按范围从代码补文档，保留语言、核对证据，区分同步抛错、异步拒绝及错误回退 |
+| `coding-common` | 按目标仓库已有写法编写或修改代码；缺省规范内嵌于技能目录，覆盖不可变数据、错误处理、边界校验、测试先行与完成前自检 |
+| `coding-typescript` | 在 TS/JS 文件上编写或修改代码；先走已安装的 **coding-common**，再叠加类型、Zod、异步错误收窄与 React props 等语言缺省 |
+| `coding-java` | 在 `.java` 上编写或修改代码；先走已安装的 **coding-common**，再叠加命名、record/不可变、Optional、构造器注入、JUnit 5 与参数化查询等语言缺省 |
+| `coding-vue` | 在 Vue 文件与相关 Composition API 模块上编写或修改代码；先走已安装的 **coding-common** 与 **coding-typescript**，再叠加 SFC、响应式、composables、Pinia、路由与组件测试等缺省 |
+| `dev-requirement` | 生成 `dr-YYYY-MM-DD-<feature-name>`，依次调用已安装的 **grilling**、**grilling-with-docs**（另需 **domain-modeling**）、**brainstorming**，写入 `docs/<dr-id>/requirement.md` 与 `proposal.md`；实现前询问是否创建子代理，只实现需求里已编号的已确认行为 |
+| `dev-debug` | 生成 `dd-YYYY-MM-DD-<feature-name>`，依次调用已安装的 **grilling**、**grilling-with-docs**（另需 **domain-modeling**），写入并更新 `docs/<dd-id>/requirement.md`；修复前询问是否创建子代理，只修复需求里已编号的已确认行为 |
 | `reviewer` | 编排已安装的 **test-helper** → **review-helper** → **doc-helper** |
 | `skill-forge` | 创建或更新技能 |
 | `skill-review` | 审查技能质量（由 `skiller` 调用） |
@@ -131,8 +138,8 @@ node --test scripts/upgrade-skill.test.mjs
 | `agent-creator` | 在 `.agents/skills/agent-<name>/SKILL.md` 创建或增量更新项目任务 Agent；依赖单独安装的 `grilling`，配套工具默认位于项目根目录的 `scripts/` |
 | `grilling-with-docs` | 澄清后按范围更新并保留无关内容，区分明确授权的全文替换；恢复不可读来源，跨环境加载依赖，复用根目录 `GLOSSARY.md` |
 | `designer` | 编排 **ui-ux-pro-max** + **frontend-design** 做差异化 UI |
-| `frontend-design` | 上游镜像的视觉设计指引（`upgrade:design`） |
-| `ui-ux-pro-max` | 上游镜像的 UI/UX 设计情报（`upgrade:design`） |
+| `frontend-design` | 上游镜像的视觉设计指引（`--design`） |
+| `ui-ux-pro-max` | 上游镜像的 UI/UX 设计情报（`--design`） |
 | `grilling` | 上游镜像的方案拷问式访谈（`--mattpocock`） |
 | `writing-for-agents` | 上游镜像的面向代理的文档编写指引（`--mattpocock`） |
 | `hatch-pet` | 上游镜像的 Codex 动画宠物创建、验证与打包工作流（`--pet`；视觉生成依赖已安装的 `imagegen`） |
@@ -168,9 +175,13 @@ node --test scripts/upgrade-skill.test.mjs
 | ------------------------------------------- | -------------------------------------------------------- |
 | `package.json`                              | 对外展示信息与 npm 脚本的单一来源                         |
 | `scripts/build.mjs`                         | 将 `package.json` 同步到各插件 JSON                      |
-| `scripts/deploy.mjs`                        | 将 `commands/`、`rules/`、`skills/` 符号链接到 harness 目录 |
-| `scripts/upgrade-skill.mjs`                 | 默认通过 Git，也可通过 `--fetch` 归档同步上游技能         |
-| `scripts/upgrade-skill-reporter.mjs`        | 并行升级时的终端/CI 输出报告器                           |
+| `scripts/deploy/deploy.mjs`                 | 将 `commands/`、`rules/`、`skills/` 符号链接到 harness 目录 |
+| `scripts/skills.json`                       | 上游技能目录，加载后为 `SKILL_SOURCES`                    |
+| `scripts/rules.json`                        | 上游规则目录，加载后为 `RULE_SOURCES`（当前为空）          |
+| `scripts/upgrade/skill.mjs`                 | 将 `skills.json` 同步到 `skills/<name>/`                 |
+| `scripts/upgrade/rule.mjs`                  | 将 `rules.json` 同步到 `rules/<name>/`                   |
+| `scripts/upgrade/download.mjs`              | 共用的 Git/`--fetch` 下载、镜像替换和 CLI 辅助函数       |
+| `scripts/upgrade/report.mjs`                | 技能与规则并行升级时的终端/CI 输出报告器                 |
 | `commands/`                                 | 可选的斜杠命令模板（当前不存在）                          |
 | `rules/`                                    | 可选的代理规则（当前不存在）                              |
 | `skills/`                                   | 仓库跟踪的技能与 Git 忽略的上游镜像                       |

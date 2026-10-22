@@ -12,8 +12,8 @@ const sourceScript = fileURLToPath(new URL('./deploy.mjs', import.meta.url));
 const fixture = (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deploy-project-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, 'scripts'));
-  const script = path.join(root, 'scripts/deploy.mjs');
+  fs.mkdirSync(path.join(root, 'scripts/deploy'), { recursive: true });
+  const script = path.join(root, 'scripts/deploy/deploy.mjs');
   fs.copyFileSync(sourceScript, script);
   fs.mkdirSync(path.join(root, 'skills/example'), { recursive: true });
   fs.writeFileSync(path.join(root, 'skills/example/SKILL.md'), 'fixture skill');
@@ -97,7 +97,7 @@ test('existing local Codex deployment still places only skills in .codex', (t) =
 
 test('npm-shaped project invocation links resources directly under the project directory', (t) => {
   const { root } = fixture(t);
-  const script = path.join(root, 'scripts/deploy.mjs');
+  const script = path.join(root, 'scripts/deploy/deploy.mjs');
   const target = path.join(root, 'target project');
   const invoke = () => spawnSync(process.execPath, [script, 'project', target], {
     cwd: root,
@@ -112,7 +112,7 @@ test('npm-shaped project invocation links resources directly under the project d
 });
 
 test('package exposes deploy:project and deploy:agent', () => {
-  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   assert.equal(pkg.scripts['deploy:project'], 'npm run deploy -t project');
   assert.equal(pkg.scripts['deploy:agent'], 'npm run deploy -t agent');
   assert.equal(pkg.scripts['deploy:current'], undefined);
@@ -151,7 +151,7 @@ test('agent user mode links into the home .agents directory and keeps existing s
   fs.writeFileSync(path.join(home, '.agents/skills/example/SKILL.md'), 'user-owned');
   fs.mkdirSync(path.join(root, 'skills/another'));
   fs.writeFileSync(path.join(root, 'skills/another/SKILL.md'), 'another skill');
-  const script = path.join(root, 'scripts/deploy.mjs');
+  const script = path.join(root, 'scripts/deploy/deploy.mjs');
   const run = () => spawnSync(process.execPath, [script, '--type', 'agent'], {
     cwd: root,
     env,

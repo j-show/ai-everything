@@ -48,28 +48,36 @@ const isFileDetail = (detail) =>
 const plainDetail = (detail) =>
   isFileDetail(detail) ? `${detail.mode} ${detail.path}` : detail;
 
+const itemName = (source) => {
+  const name = source.name ?? source.skill ?? source.rule;
+  if (!name) {
+    throw new Error('Upgrade reporter requires a skill, rule, or name');
+  }
+  return name;
+};
+
 const createPlainReporter = (states, stream, now) => {
-  const write = (skill, message) => stream.write(`[${skill}] ${message}\n`);
+  const write = (name, message) => stream.write(`[${name}] ${message}\n`);
 
   return {
-    start(skill) {
-      const state = states.get(skill);
+    start(name) {
+      const state = states.get(name);
       state.startedAt = now();
-      write(skill, `RUN  ${state.source}`);
+      write(name, `RUN  ${state.source}`);
     },
-    detail(skill, message) {
-      write(skill, plainDetail(message));
+    detail(name, message) {
+      write(name, plainDetail(message));
     },
-    pass(skill, { durationMs, fileCount }) {
+    pass(name, { durationMs, fileCount }) {
       write(
-        skill,
+        name,
         `PASS Done in ${formatDuration(durationMs)} · ${formatFiles(fileCount)}`,
       );
     },
-    fail(skill, error) {
-      const state = states.get(skill);
+    fail(name, error) {
+      const state = states.get(name);
       write(
-        skill,
+        name,
         `FAIL Failed in ${formatDuration(now() - state.startedAt)} · ${errorMessage(error)}`,
       );
     },
@@ -122,7 +130,7 @@ const createTtyReporter = (
         ? state.details
         : state.details.slice(-liveDetailLimit);
     const lines = [
-      paint(color, ANSI.green, truncate(state.skill, width)),
+      paint(color, ANSI.green, truncate(state.name, width)),
       `${paint(color, ANSI.purple, '│')} ${paint(color, badgeColor, badge)} ${paint(color, ANSI.yellow, source)}`,
       ...visibleDetails.map(formatDetail),
     ];
@@ -164,35 +172,35 @@ const createTtyReporter = (
     }
   };
 
-  const update = (skill, updater) => {
-    updater(states.get(skill));
+  const update = (name, updater) => {
+    updater(states.get(name));
     requestRender();
   };
 
   stream.write(ANSI.hideCursor);
 
   return {
-    start(skill) {
-      update(skill, (state) => {
+    start(name) {
+      update(name, (state) => {
         state.status = 'RUN';
         state.startedAt = now();
       });
     },
-    detail(skill, message) {
-      update(skill, (state) => {
+    detail(name, message) {
+      update(name, (state) => {
         state.details.push(message);
         state.fileCount += 1;
       });
     },
-    pass(skill, { durationMs, fileCount }) {
-      update(skill, (state) => {
+    pass(name, { durationMs, fileCount }) {
+      update(name, (state) => {
         state.status = 'PASS';
         state.durationMs = durationMs;
         state.fileCount = fileCount;
       });
     },
-    fail(skill, error) {
-      update(skill, (state) => {
+    fail(name, error) {
+      update(name, (state) => {
         state.status = 'FAIL';
         state.durationMs = now() - state.startedAt;
         state.error = errorMessage(error);
@@ -214,9 +222,9 @@ const createTtyReporter = (
 };
 
 /**
- * Create a reporter for concurrent skill upgrades.
+ * 为并行升级创建报告器。条目用 `name`、`skill` 或 `rule` 标识，来源取配置里的 `repo`。
  *
- * @param {{ skill: string, repo: string }[]} sources
+ * @param {{ name?: string, skill?: string, rule?: string, repo: string }[]} sources
  * @param {{
  *   stream?: NodeJS.WriteStream,
  *   now?: () => number,
@@ -236,19 +244,22 @@ export const createUpgradeReporter = (
   } = {},
 ) => {
   const states = new Map(
-    sources.map(({ skill, repo }) => [
-      skill,
-      {
-        skill,
-        source: sourceLabel(repo),
-        status: 'WAIT',
-        startedAt: now(),
-        durationMs: 0,
-        fileCount: 0,
-        details: [],
-        error: '',
-      },
-    ]),
+    sources.map((source) => {
+      const name = itemName(source);
+      return [
+        name,
+        {
+          name,
+          source: sourceLabel(source.repo),
+          status: 'WAIT',
+          startedAt: now(),
+          durationMs: 0,
+          fileCount: 0,
+          details: [],
+          error: '',
+        },
+      ];
+    }),
   );
 
   return stream.isTTY

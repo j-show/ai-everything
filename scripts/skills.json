@@ -1,0 +1,119 @@
+[
+  {
+    "skill": "hatch-pet",
+    "repo": "https://github.com/openai/skills",
+    "ref": "main",
+    "path": "skills/.curated/hatch-pet",
+    "groups": [
+      "pet"
+    ]
+  },
+  {
+    "skill": "skill-forge",
+    "repo": "https://github.com/sanyuan0704/sanyuan-skills",
+    "ref": "main",
+    "path": "skills/skill-forge",
+    "groups": [
+      "skill"
+    ]
+  },
+  {
+    "skill": "grilling",
+    "repo": "https://github.com/mattpocock/skills",
+    "ref": "main",
+    "path": "skills/productivity/grilling",
+    "groups": [
+      "mattpocock"
+    ]
+  },
+  {
+    "skill": "domain-modeling",
+    "repo": "https://github.com/mattpocock/skills",
+    "ref": "main",
+    "path": "skills/engineering/domain-modeling",
+    "groups": [
+      "mattpocock"
+    ]
+  },
+  {
+    "skill": "writing-for-agents",
+    "repo": "https://github.com/mattpocock/skills",
+    "ref": "main",
+    "path": "skills/productivity/writing-for-agents",
+    "groups": [
+      "mattpocock"
+    ]
+  },
+  {
+    "skill": "frontend-design",
+    "repo": "https://github.com/anthropics/skills",
+    "ref": "main",
+    "path": "skills/frontend-design",
+    "groups": [
+      "design"
+    ]
+  },
+  {
+    "skill": "ui-ux-pro-max",
+    "repo": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "ref": "main",
+    "path": ".claude/skills/ui-ux-pro-max",
+    "groups": [
+      "design"
+    ]
+  },
+  {
+    "skill": "brainstorming",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/brainstorming",
+    "groups": [
+      "superpower"
+    ]
+  },
+  {
+    "skill": "test-driven-development",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/test-driven-development",
+    "groups": [
+      "superpower"
+    ]
+  },
+  {
+    "skill": "systematic-debugging",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/systematic-debugging",
+    "groups": [
+      "superpower"
+    ]
+  },
+  {
+    "skill": "requesting-code-review",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/requesting-code-review",
+    "groups": [
+      "superpower"
+    ]
+  },
+  {
+    "skill": "receiving-code-review",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/receiving-code-review",
+    "groups": [
+      "superpower"
+    ]
+  },
+  {
+    "skill": "verification-before-completion",
+    "repo": "https://github.com/obra/superpowers",
+    "ref": "main",
+    "path": "skills/verification-before-completion",
+    "groups": [
+      "superpower"
+    ]
+  }
+]

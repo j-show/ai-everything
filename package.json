@@ -21,17 +21,15 @@
     "prepare": "npm run init:darwin",
     "init:darwin": "npx skills add alchaincyf/darwin-skill",
     "build": "node scripts/build.mjs",
-    "deploy": "node scripts/deploy.mjs",
+    "deploy": "node scripts/deploy/deploy.mjs",
     "deploy:project": "npm run deploy -t project",
     "deploy:agent": "npm run deploy -t agent",
     "deploy:cursor": "npm run deploy -t cursor",
     "deploy:codex": "npm run deploy -t codex",
     "deploy:claude": "npm run deploy -t claude",
     "deploy:qcode": "npm run deploy -t qcode",
-    "upgrade:skill": "node scripts/upgrade-skill.mjs",
-    "upgrade:design": "npm run upgrade:skill -- --design",
-    "upgrade:mattpocock": "npm run upgrade:skill -- --mattpocock",
-    "upgrade:superpower": "npm run upgrade:skill -- --superpower"
+    "upgrade:skill": "node scripts/upgrade/skill.mjs",
+    "upgrade:rule": "node scripts/upgrade/rule.mjs"
   },
   "devDependencies": {
     "tar": "^7.5.22"

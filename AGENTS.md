@@ -5,13 +5,14 @@
 ## 事实来源
 
 ```text
-package.json ── scripts/build.mjs ── .{cursor,codex,claude}-plugin/
-skills/      ── scripts/deploy.mjs ── harness 或项目目录的资源链接
-上游仓库     ── scripts/upgrade-skill.mjs ── skills/ 中的镜像
+package.json ── scripts/build.mjs          ── .{cursor,codex,claude}-plugin/
+skills/      ── scripts/deploy/deploy.mjs  ── harness 或项目目录的资源链接
+上游仓库     ── scripts/upgrade/skill.mjs  ── skills/ 中的镜像
+上游仓库     ── scripts/upgrade/rule.mjs   ── rules/ 中的镜像
 hooks/       ── SessionStart 配置与启动脚本
 ```
 
-- 元数据与脚本入口以 [package.json](package.json) 为准。升级来源、分组和路径以 [SKILL_SOURCES](scripts/upgrade-skill.mjs) 为准。
+- 元数据与脚本入口以 [package.json](package.json) 为准。技能目录在 [scripts/skills.json](scripts/skills.json)，由 [scripts/upgrade/skill.mjs](scripts/upgrade/skill.mjs) 导出为 `SKILL_SOURCES`。规则目录在 [scripts/rules.json](scripts/rules.json)，由 [scripts/upgrade/rule.mjs](scripts/upgrade/rule.mjs) 导出为 `RULE_SOURCES`。下载与报告在 [download.mjs](scripts/upgrade/download.mjs) 和 [report.mjs](scripts/upgrade/report.mjs)。
 - 技能契约以 `skills/<name>/SKILL.md` 及其 `references/` 为准。
 - 自有技能随仓库维护。`.gitignore` 忽略 14 个上游镜像，以及 `.agents/`、`.review/`、`skills/**/test-prompts.json`。不能假设全新检出里有这些路径。
 - `commands/`、`rules/` 和 `skills/using-ai-everything/SKILL.md` 当前缺失。部署跳过缺失资源。SessionStart 读不到该技能时输出错误回退文本。
@@ -53,7 +54,7 @@ hooks/       ── SessionStart 配置与启动脚本
 | 何时阅读 | 文档 | 用途 |
 | --- | --- | --- |
 | 修改部署路径、链接去重或部署验证 | [部署](docs/agents/deploy.md) | 目标目录和隔离验证 |
-| 修改升级来源、分组、下载方式或报告 | [升级器](docs/agents/upgrade-skill.md) | 下载、失败保留和回归 |
+| 修改技能或规则的升级来源、分组、下载方式或报告 | [升级器](docs/agents/upgrade-skill.md) | 共用下载、失败保留和回归 |
 | 修改 `skills/` 下自有技能 | [技能回归](docs/agents/skill-regression.md) | 该技能的场景和禁止降级 |
 
 ## 完成
