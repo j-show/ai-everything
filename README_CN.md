@@ -127,8 +127,8 @@ node --test scripts/deploy/deploy.test.mjs
 | `coding-typescript` | 在 TS/JS 文件上编写或修改代码；先走已安装的 **coding-common**，再叠加类型、Zod、异步错误收窄与 React props 等语言缺省 |
 | `coding-java` | 在 `.java` 上编写或修改代码；先走已安装的 **coding-common**，再叠加命名、record/不可变、Optional、构造器注入、JUnit 5 与参数化查询等语言缺省 |
 | `coding-vue` | 在 Vue 文件与相关 Composition API 模块上编写或修改代码；先走已安装的 **coding-common** 与 **coding-typescript**，再叠加 SFC、响应式、composables、Pinia、路由与组件测试等缺省 |
-| `dev-requirement` | 生成 `dr-YYYY-MM-DD-<feature-name>`，依次调用已安装的 **grilling**、**grilling-with-docs**（另需 **domain-modeling**）、**brainstorming**，写入 `docs/<dr-id>/requirement.md` 与 `proposal.md`；实现前询问是否创建子代理，只实现需求里已编号的已确认行为 |
-| `dev-debug` | 生成 `dd-YYYY-MM-DD-<feature-name>`，依次调用已安装的 **grilling**、**grilling-with-docs**（另需 **domain-modeling**），写入并更新 `docs/<dd-id>/requirement.md`；修复前询问是否创建子代理，只修复需求里已编号的已确认行为 |
+| `dev-requirement` | 生成 `DR-<YYMMDD>-<feature-name>`；调用已安装的 **grilling**、**grilling-with-docs**、**domain-modeling**、**brainstorming**，写入 `docs/<dr-id>/requirement.md` 与 `proposal.md`，按本轮要求停在需求、方案或实现阶段，沿用明确的续跑选择。批准后按已确认编号执行 **test-driven-development** → **requesting-code-review** → **receiving-code-review** → **verification-before-completion**；支持实现与审查分别派发、当前会话实现加独立审查，或明确披露的自审 |
+| `dev-debug` | 生成 `DD-<YYMMDD>-<feature-name>`，通过已安装的 **grilling**、**grilling-with-docs** 和 **domain-modeling** 在 `docs/<dd-id>/requirement.md` 确认行为编号；选择修复与审查执行方式，再走 **systematic-debugging** → **test-driven-development** → **requesting-code-review** / **receiving-code-review** → **verification-before-completion**，实验恢复只撤回本轮改动、冲突时保留用户编辑，并明确标注自审与阻塞 |
 | `reviewer` | 编排已安装的 **test-helper** → **review-helper** → **doc-helper** |
 | `skill-forge` | 创建或更新技能 |
 | `skill-review` | 审查技能质量（由 `skiller` 调用） |
