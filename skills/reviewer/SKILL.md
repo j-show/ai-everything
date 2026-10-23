@@ -1,149 +1,90 @@
 ---
 name: reviewer
-description: "ai-everything-reviewer"
+description: "编排独立代码审查、反馈核实、自动修复复审和最终验证；支持仅审查模式。"
 disable-model-invocation: true
 ---
 
 # Reviewer
 
-IRON LAW: After Step 0 confirms all three helpers are **installed**, run **test-helper → review-helper → doc-helper** automatically — no user confirmation to start. Never substitute repo paths or SKILL.md reads for skill invocation. If any prerequisite is missing, stop and output only the missing-skill message with install instructions.
-
-Red flags (stop — fix before continuing):
-
-- Proceeding without Step 0 install check for all three helpers
-- Asking the user to confirm starting the pipeline after Step 0 passed
-- Reading `skills/test-helper/` (or siblings) instead of invoking installed skills
-- Skipping test verification before review-helper
-- Starting doc-helper before review-helper dual loops finish
-
-## Workflow
-
-Copy this checklist and track progress:
-
-```
-Reviewer Progress:
-
-- [ ] Step 0: Prerequisite check ⛔ BLOCKING
-  - [ ] Confirm test-helper, review-helper, doc-helper are installed
-  - [ ] Parse {{input}} for review scope (Step 2) and optional hints (Steps 1, 3)
-- [ ] Step 1: test-helper ⚠️ REQUIRED
-  - [ ] Invoke test-helper; complete discovery → rewrite → verify
-- [ ] Step 2: review-helper ⚠️ REQUIRED
-  - [ ] Invoke review-helper with resolved scope; complete report → fix → verify loops
-- [ ] Step 3: doc-helper ⚠️ REQUIRED
-  - [ ] Invoke doc-helper on modules touched in Steps 1–2 (or user path)
-- [ ] Step 4: Summarize for user ⚠️ REQUIRED
-  - [ ] Run pre-delivery checklist below
-```
-
-**Control flow**
-
-1. Step 0 must pass before any helper runs.
-2. **When Step 0 passes → proceed through Steps 1–4 without asking the user to confirm** (no "shall I start?" gate).
-3. Step 1 must finish with tests verified before Step 2.
-4. Step 2 must complete review-helper dual loops before Step 3.
-5. Steps 1 → 2 → 3 are fixed order; no parallel shortcuts.
-
-## Step 0: Prerequisite check ⛔ BLOCKING
-
-Confirm these skills are **installed and callable** in the current session (available skills list / Skill tool — not repo directories):
-
-| Required skill  | Role                                       |
-| --------------- | ------------------------------------------ |
-| `test-helper`   | Step 1: rewrite tests from implementation  |
-| `review-helper` | Step 2: review report, fixes, verification |
-| `doc-helper`    | Step 3: JSDoc, inline comments, README     |
-
-**Detection**: verify each `name` in the session skill list — do not infer from `skills/` paths in the repo.
-
-If any are missing → **stop immediately** and output **only**:
+主代理负责范围、反馈处置和修复；独立审查代理只读检查。已授权的范围内自动迭代，不逐轮询问。用户明确要求优先于默认流程。
 
 ```text
-缺少已安装技能：<missing names>
-
-请先安装后再运行本技能：
-- AI Everything 插件（含 test-helper、review-helper、doc-helper）：Cursor 插件市场安装 ai-everything，或在仓库根目录执行 `npm run deploy:cursor`
-- 亦可单独安装：
-  - npx skills add j-show/ai-everything --path skills/test-helper
-  - npx skills add j-show/ai-everything --path skills/review-helper
-  - npx skills add j-show/ai-everything --path skills/doc-helper
+锁定模式、范围、版本 → 基线验证 → requesting-code-review
+                                       ↓
+                          独立代理：review-helper 仅审查
+                                       ↓
+                            receiving-code-review 核实
+                              ├─ 仅审查 → 报告
+                              └─ 修复 → 验证 → 独立复审
+                                   ↑                │
+                                   └─ 有效范围内问题 ┘
+                                       ↓
+                     verification-before-completion → 交付
 ```
 
-Do not run tests, review, or documentation without all three.
+## 0. 依赖与范围
 
-**When all three are present** → parse `{{input}}` and **immediately begin Step 1** (no confirmation prompt).
+从当前会话的技能登记列表或技能工具确认依赖，按环境支持的方式加载并执行登记入口。仅在仓库中找到同名文件不等于已安装；不要把读取镜像当成调用，也不自动安装或升级。
 
-### Parse `{{input}}` — review scope (Step 2)
+| 依赖 | 使用时机 |
+| --- | --- |
+| `review-helper` | 必需；解析范围、审查标准、版本验证和报告格式 |
+| `requesting-code-review` | 必需；组织上下文并派发独立审查 |
+| `receiving-code-review` | 必需；核实反馈并决定处置 |
+| `verification-before-completion` | 必需；每次成功声明和最终交付前核对证据 |
+| `test-helper` | 仅当需要补齐覆盖或有证据修正过时测试时 |
+| `doc-helper` | 仅当改动需要同步注释或文档时 |
 
-Pass the resolved value explicitly to **review-helper** in Step 2:
+🔴 CHECKPOINT · 依赖缺失：必需依赖缺失时，列出名称及其来源（本仓库或 Superpowers），停止依赖它的流程；不假装已执行。条件依赖在需要时检查，缺失只阻塞相关工作并如实报告。
 
-| `{{input}}`     | Review scope (Step 2)                            |
-| --------------- | ------------------------------------------------ |
-| `all`           | All code in the current project                  |
-| `self`          | All code on the current branch                   |
-| `{commit-hash}` | That commit's changes + **staging area**         |
-| _(empty)_       | Local commits not on `origin` + **staging area** |
+调用已安装的 `review-helper`，先执行其锁定任务步骤，并读取其 `references/review-handoff.md`。主代理不在此时启动 review-helper 的本地修复循环。
 
-Notes:
+- 模式沿用 review-helper：默认审查并修复；“仅审查/只报告/不改代码”禁止修复，“不写文件”还禁止落盘报告。
+- `all`、`self`、提交、空参数、路径和显式范围完全沿用其 `scope-and-diff.md`。路径过滤所有版本层，不能只作提示；不另设基线算法。
+- 记录工作区和暂存区状态、授权路径、需求、被审查版本和报告目的地。锁定修复目标，保护已有修改；默认不暂存、不提交、不建分支。
+- 在所选版本运行覆盖相关行为的已有检查作为基线，不先重写测试。已有失败、零测试、环境阻塞分别记录，继续独立可做的审查；验证快照不同于工作区时遵循 review-helper 的隔离规则。
 
-- Staging area is always in scope for Step 2 unless the user explicitly excludes it.
-- For `all` or very large scope, **do not ask for confirmation to start** — proceed automatically per control flow rule 2.
-- Commit hash applies to **review-helper only** — not test-helper scope (see Step 1).
+## 1. 发起独立审查
 
-Directory paths in `{{input}}` are **hints** for Steps 1 and 3 only. For Step 2, treat a directory path like _(empty)_ — unpushed commits on `origin` + staging — unless the user explicitly names a different review scope.
+调用 `requesting-code-review`，按交接约定提供需求、范围、版本及验证证据。其 BASE/HEAD 示例仅适用于提交层；暂存、未暂存和新增文件必须另附准确内容标识，不能为获得 SHA 创建提交。
 
-## Step 1: test-helper ⚠️ REQUIRED
+- 派发一个全新上下文的审查代理，明确使用已安装的 `review-helper` 的**仅审查且不写文件**模式。只传评审所需材料，不继承完整会话历史。
+- 审查代理不修改代码、index、HEAD 或原工作区，不派生其他代理，也不调用 reviewer/requesting-code-review 形成递归。
+- 严格禁写时不导出快照、不运行会落盘的检查；需要隔离执行的验证由主代理在用户授权范围内负责。审查代理读取其证据，但不把主代理或自身的声明当成独立运行结果。
+- 审查代理按 P0–P3 返回发现、证据及覆盖限制；主代理汇总到唯一报告。优先级按实际影响评估，不机械映射上游的三档标签。
+- 🔴 CHECKPOINT · 独立审查不可用：无独立代理能力或用户禁止委派时，标记独立审查阻塞。可以继续允许的本地核对，但不得静默称为独立审查；只有用户已接受自审替代时才以“自审”交付。
 
-1. Invoke installed **test-helper** and follow its full workflow (scope → discover implementation → contract checklist → rewrite → verify).
-2. Scope hint:
-   - If `{{input}}` is a directory path (not `all`, `self`, or a commit hash), pass it as the test scope hint.
-   - Otherwise use test-helper defaults (full suite or skill-internal rules).
-3. Do not start Step 2 until Step 1 verification has run and failures are resolved or explicitly accepted by the user.
+## 2. 核实反馈并自动迭代
 
-## Step 2: review-helper ⚠️ REQUIRED
+收到反馈后调用 `receiving-code-review`，对照需求、调用链、被审查版本及当前修复目标核实每项问题。按交接约定记录“成立待修复 / 已修复待复审 / 已关闭 / 不成立 / 待澄清 / 阻塞”等处置和证据。
 
-1. Invoke installed **review-helper**.
-2. Set review scope to the table value from Step 0 (`all` / `self` / hash / empty → unpushed + staging).
-3. Complete review-helper control flow:
-   - Loop A: report → fix until no remaining fix items.
-   - Loop B: verify → fix failures → retry verify until pass.
-4. Report must follow review-helper rules (Chinese, P0–P3, save under `.review/{timestamp}.md`).
+- 成立且在授权范围内：主代理做最小修复。需要补测或修正过时测试时调用 `test-helper`，不能为了通过而削弱有效回归。
+- 不成立：记录反证；有实质分歧时将双方证据交给独立复审，不靠反复派发直到得到赞同。
+- 🔴 CHECKPOINT · 需要决定的反馈：信息不足、与需求冲突或需要越界时，仅暂停依赖该决定的项并询问，继续已证实互不依赖的项；不能确认独立性时，暂停相关修复直到澄清。调用 receiving-code-review 时将此规则作为本地任务约束，细化其“先澄清再实施”，不因一项不清楚阻塞全部独立工作。反馈不能自行授予修改权限。
+- 仅审查模式：核实并报告，完成允许的验证后交付，不进入修复或文档修改。
 
-Do not start Step 3 until Loop A and Loop B are complete.
+每轮修复后检查实际补丁，运行受影响验证；需要同步文档时调用 `doc-helper`，遵守项目 README/AGENTS 约定和授权路径，再将本轮差异、问题处置及新证据交给独立复审。文档修改也纳入复审和最终差异核对，不为流程而补写无关注释。
 
-## Step 3: doc-helper ⚠️ REQUIRED
+复审仍通过 `requesting-code-review` 派发只读代理；返回反馈仍通过 `receiving-code-review` 核实。验证发现的范围内缺陷同样进入修复、验证、独立复审循环。确认的 P2/P3 缺陷也按授权处理，不能只清空 P0/P1 就宣称完成。
 
-1. Invoke installed **doc-helper** (survey → JSDoc → inline comments → README → self-check).
-2. Prefer modules touched in Steps 1–2; if the user gave a directory in `{{input}}`, align doc scope with that path.
-3. Follow doc-helper ignore directories and bilingual README rules.
+**🔴 CHECKPOINT · 循环出口（沿用已有授权，不逐轮确认）：**
 
-## Step 4: Summarize for user ⚠️ REQUIRED
+- 范围内待修复问题已经关闭，且最终验证支持结论：进入交付。
+- 同一问题再次尝试却没有新证据或进展：停止该项，报告已尝试措施和剩余问题，不重复改写正确代码或测试。
+- 环境缺失、无关失败、越界或用户修改冲突：记录阻塞或待决策项，继续其他独立工作，不无限重试。
+- 原暂存区未更新不能触发重复修复；修复后的工作区与原审查快照分别记录。
 
-After the pipeline, briefly report:
+## 3. 最终验证与交付
 
-- Prerequisite check: three skills present (one line if already verified).
-- Step 1: test scope and pass/fail outcome.
-- Step 2: review scope, remaining P0–P1 items (if any), verification command and result.
-- Step 3: documentation updates (README, which modules received JSDoc).
+调用 `verification-before-completion`：核对最终实际差异、需求覆盖、问题处置和当前版本的验证输出。检查用户原有暂存内容及无关修改仍被保留。
 
-## Anti-Patterns
+调用时明确本地“新鲜证据”的适配：必须是本轮实际执行、对应最后一次相关修改后的内容，并保留完整命令、版本和结果。运行覆盖必要行为的验证并检查真实输出；内容、配置、依赖和相关环境未变化且证据仍适用时，不为重复汇报机械重跑，不复用历史会话结果。任何后续相关修改或环境变化都会使对应证据失效。语法检查、空报告、代理称完成、零测试或用户接受缺口都不能替代通过。
 
-- Asking "是否开始审查流水线？" after Step 0 already passed — proceed automatically
-- Running helpers without verifying they are installed in the session
-- Reading `skills/test-helper/SKILL.md` (or siblings) instead of invoking installed skills
-- Skipping test verification before review
-- Starting doc-helper before review-helper dual loops finish
-- Passing commit hash as test-helper scope (hash is review scope only)
-- Expanding or shrinking review scope beyond the Step 0 table
-- Reordering steps 1 → 2 → 3 without explicit user request
-- Vague missing-skill message without install commands
+按 review-helper 的中文报告格式交付：
 
-## Pre-Delivery Checklist
+- 模式、范围、基线和版本层；独立审查或已接受的自审。
+- 发现、处置证据、修复与复审结果、剩余问题及待决策项。
+- 实际验证命令、工作目录、版本、进程退出状态及覆盖；分别列出通过、失败、阻塞、未执行。
+- 必要文档更新和环境限制。只有所需检查真实通过且问题已解决时才声明完成；带限制交付现状不等于全部通过。
 
-- [ ] All three helper skills were confirmed installed before execution
-- [ ] Pipeline started automatically after Step 0 (no unnecessary start confirmation)
-- [ ] test-helper completed with verification run
-- [ ] review-helper used correct `all` / `self` / hash / empty scope and finished both loops
-- [ ] doc-helper ran on touched modules (or user-specified path)
-- [ ] User received a short end-to-end summary
-- [ ] No step used repo skill paths as a substitute for installed skill invocation
+上游三个技能保持镜像；这里的适配处理本仓库的范围、快照、独立角色和停止规则，不复制维护上游全文。

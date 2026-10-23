@@ -129,7 +129,7 @@ node --test scripts/deploy/deploy.test.mjs
 | `coding-vue` | 在 Vue 文件与相关 Composition API 模块上编写或修改代码；先走已安装的 **coding-common** 与 **coding-typescript**，再叠加 SFC、响应式、composables、Pinia、路由与组件测试等缺省 |
 | `dev-requirement` | 生成 `DR-<YYMMDD>-<feature-name>`；调用已安装的 **grilling**、**grilling-with-docs**、**domain-modeling**、**brainstorming**，写入 `docs/<dr-id>/requirement.md` 与 `proposal.md`，按本轮要求停在需求、方案或实现阶段，沿用明确的续跑选择。批准后按已确认编号执行 **test-driven-development** → **requesting-code-review** → **receiving-code-review** → **verification-before-completion**；支持实现与审查分别派发、当前会话实现加独立审查，或明确披露的自审 |
 | `dev-debug` | 生成 `DD-<YYMMDD>-<feature-name>`，通过已安装的 **grilling**、**grilling-with-docs** 和 **domain-modeling** 在 `docs/<dd-id>/requirement.md` 确认行为编号；选择修复与审查执行方式，再走 **systematic-debugging** → **test-driven-development** → **requesting-code-review** / **receiving-code-review** → **verification-before-completion**，实验恢复只撤回本轮改动、冲突时保留用户编辑，并明确标注自审与阻塞 |
-| `reviewer` | 编排已安装的 **test-helper** → **review-helper** → **doc-helper** |
+| `reviewer` | 编排 **requesting-code-review** → 独立只读 **review-helper** → **receiving-code-review**，自动循环修复、验证和复审，经 **verification-before-completion** 交付；显性检查点沿用已有授权，不逐轮审批；按需调用 **test-helper** 和 **doc-helper**，支持仅审查 |
 | `skill-forge` | 创建或更新技能 |
 | `skill-review` | 审查技能质量（由 `skiller` 调用） |
 | `skiller` | 调用已安装的 **skill-forge** 一次，再循环执行 **skill-review** → 修复，直到无待处理建议 |

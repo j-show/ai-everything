@@ -14,6 +14,7 @@ hooks/       ── SessionStart 配置与启动脚本
 
 - 元数据与脚本入口以 [package.json](package.json) 为准。技能目录在 [scripts/skills.json](scripts/skills.json)，由 [scripts/upgrade/skill.mjs](scripts/upgrade/skill.mjs) 导出为 `SKILL_SOURCES`。规则目录在 [scripts/rules.json](scripts/rules.json)，由 [scripts/upgrade/rule.mjs](scripts/upgrade/rule.mjs) 导出为 `RULE_SOURCES`。下载与报告在 [download.mjs](scripts/upgrade/download.mjs) 和 [report.mjs](scripts/upgrade/report.mjs)。
 - 技能契约以 `skills/<name>/SKILL.md` 及其 `references/` 为准。
+- 审查编排由 `reviewer` 维护，范围和独立审查交接以 `review-helper/references/` 为准；显性检查点不新增逐轮审批。三个 Superpowers 审查与验证技能保持上游镜像，不在镜像中加入本地流程。
 - 自有技能随仓库维护。`.gitignore` 忽略 14 个上游镜像，以及 `.agents/`、`.review/`、`skills/**/test-prompts.json`。不能假设全新检出里有这些路径。
 - `commands/`、`rules/` 和 `skills/using-ai-everything/SKILL.md` 当前缺失。部署跳过缺失资源。SessionStart 读不到该技能时输出错误回退文本。
 

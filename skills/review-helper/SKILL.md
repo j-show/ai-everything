@@ -7,6 +7,8 @@ description: "Review scoped code changes, report evidence-backed P0-P3 findings 
 
 只审查约定范围；读取调用链用于判断影响，不扩展修改范围。用户明确要求优先于默认流程。
 
+由 `reviewer` 等外层编排独立审查时，先读取 [review-handoff.md](references/review-handoff.md)，沿用传入的模式、范围和版本。作为审查代理时只读返回发现，不修复、不写报告、不派生代理；反馈核实、修复、验证和重新派发由主代理负责。单独调用本技能仍执行下列流程，无须额外依赖 Superpowers 技能。
+
 ```text
 锁定模式、范围和版本 → 审查并报告
   ├─ 仅审查 → 汇报发现与验证限制
