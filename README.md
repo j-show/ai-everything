@@ -10,7 +10,7 @@
 
 - [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/**/*.mjs` use `import` and modern `fs` APIs)
 - Skill and rule upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
-- Default `--git` upgrades do not load `tar`. `--fetch` loads that development dependency only when extracting an archive; install it with `npm install --ignore-scripts` before using `--fetch`. Build and deploy scripts use only Node standard libraries. A regular install also runs `prepare` → `init:darwin` (`npx skills add alchaincyf/darwin-skill`); use `npm run init:darwin` separately when that skill is wanted.
+- Default `--git` upgrades do not load `tar`. `--fetch` loads that development dependency only when extracting an archive; install it with `npm install --ignore-scripts` before using `--fetch`. Build and deploy scripts use only Node standard libraries. There is no `prepare` script. Run `npm run upgrade:init` separately; it calls `npx skills` over the network.
 - **Deploy on Windows**: Git Bash or another `bash` on `PATH` is only needed for hook scripts, not for `npm run deploy`
 
 ---
@@ -30,7 +30,16 @@
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
 | `npm run upgrade:skill` | `node scripts/upgrade/skill.mjs` |
 | `npm run upgrade:rule` | `node scripts/upgrade/rule.mjs` |
-| `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
+| `npm run upgrade:init` | `node scripts/upgrade/init.mjs` |
+
+`npm run upgrade:init` reads [`scripts/init.json`](scripts/init.json), a JSON array of `{ skill, repo, name, groups }`. `repo` and `name` may be omitted. A `repo` runs `npx skills add <repo> --skill <skill> --agent universal --yes`. A `name` without `repo` runs `npx skills add <name> --agent universal --yes`. An entry with neither is skipped and does not stop later entries. `--agent universal` without `-g` writes only to the current project's `.agents/skills/` and does not install into Cursor, Claude, Codex, or any other agent directory. Repeat `--skill <name>` to select by name; named selection ignores groups. Multiple `--<group>` flags select their union. The catalog group is `--alchaincyf`, covering `darwin-skill`, `huashu-nuwa`, and `huashu-design`. `--yes` skips skills CLI prompts. Invalid entries, or a non-zero install, exit 1 and do not start later entries. Installation uses the network.
+
+```bash
+npm run upgrade:init
+npm run upgrade:init -- --alchaincyf
+npm run upgrade:init -- --skill darwin-skill
+npm run upgrade:init -- --skill huashu-nuwa
+```
 
 ```bash
 # Link commands/rules/skills into a local harness folder
@@ -88,9 +97,10 @@ Run from the repository root:
 
 ```bash
 node --test scripts/deploy/deploy.test.mjs
+node --test scripts/upgrade/init.test.mjs
 ```
 
-The deploy suite uses temporary projects. After deployment changes, also exercise `npm run deploy:project "<temporary project>"` for existing-content protection and repeat runs. Upgrade script tests are not in this checkout. Skill behavior scenarios in `skills/**/test-prompts.json` are local, Git-ignored inventories, not automated test runners. See [AGENTS.md](AGENTS.md) for scoped regression requirements.
+The deploy suite uses temporary projects. After deployment changes, also exercise `npm run deploy:project "<temporary project>"` for existing-content protection and repeat runs. The `upgrade:init` suite injects the install runner, so it does not call real `npx` or write into the current project. Tests for `upgrade:skill` and `upgrade:rule` are still not in this checkout. Skill behavior scenarios in `skills/**/test-prompts.json` are local, Git-ignored inventories, not automated test runners. See [AGENTS.md](AGENTS.md) for scoped regression requirements.
 
 ---
 
@@ -118,11 +128,11 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 
 | Skill | Role |
 | ----- | ---- |
-| `commit-helper` | Read-only summaries/drafts or scoped Git commits, including selected staged paths; preserves unrelated index content and uses literal-safe UTF-8 messages |
+| `commit-helper` | Read-only summaries/drafts or scoped Git commits, including selected staged paths; classifies intent from versioned contracts, resolves same-type purposes without a tie question, and preserves unrelated staged content and literal-safe UTF-8 messages |
 | `clean-helper` | Scoped cleanup with a default `.review/clean-{timestamp}.md` audit trail; reuses authorization/report paths, honors strict no-write requests, and preserves regressions/user edits during local recovery |
 | `test-helper` | Repair stale tests or add requested coverage; preserve regressions, scoped prerequisites and cleanup on failure, and report unverified work |
 | `review-helper` | Scoped P0–P3 review and repair; preserves user changes, verifies the reviewed snapshot in isolation when needed, and reports blockers |
-| `doc-helper` | Scoped documentation from code; preserves language, verifies evidence, and distinguishes throws, rejections, and error fallbacks |
+| `doc-helper` | Routes JS/TS, Java, Python and C/C++ comments by file and module; scopes symbol docs, inline comments and README sections separately, and reports unresolved targets apart from unverified checks |
 | `coding-common` | Write or change code in the target repository's existing style; default rules live inside the skill and cover immutability, errors, boundary validation, tests-first, and a pre-completion review |
 | `coding-typescript` | Write or change TypeScript/JavaScript code; runs installed **coding-common** first, then applies language defaults for types, Zod, error narrowing, and React props |
 | `coding-java` | Write or change `.java` files; runs installed **coding-common** first, then applies language defaults for naming, records/immutability, Optional, constructor injection, JUnit 5, and parameterized queries |
@@ -146,6 +156,18 @@ Skills live under `skills/`; each folder contains `SKILL.md` plus optional `refe
 | Superpowers group | Seven upstream skills for planning, testing, debugging, review, and verification; names are listed in the selection table above (`--superpower`) |
 
 All 14 skills in the upstream selection table are mirrors ignored by Git; run `npm run upgrade:skill` to fetch them in a fresh checkout. Other skills are maintained in this repository. Having files locally does not make dependencies callable in the current session: orchestrators resolve their dependencies from the session's registered entries.
+
+### Code comments and README
+
+Use `doc-helper` with the target files or symbols and the required output. It routes JS/TS, Java, Python and C/C++ independently, preserves existing project conventions, and uses the owning module's available checks. See the [usage guide](skills/doc-helper/README.md) for language formats and boundaries.
+
+| Request example | Behavior |
+| --- | --- |
+| “Add JSDoc only to the public API in `src/parse.ts`; leave function bodies and README unchanged.” | Updates symbol documentation within the named scope |
+| “Add key-step inline comments only inside `retry`; do not add JSDoc or edit other functions.” | Explains non-obvious implementation steps without adding symbol documentation |
+| “Correct only the Usage section of this Rust project's README; keep it in English.” | Reads source as evidence and edits only that section; unsupported code-comment languages do not block README work |
+
+Requested units already documented accurately count as handled without edits. If a required symbol remains unresolved, the request is partial even when other symbols in the same file were updated. Check results are reported separately; missing tools do not trigger installation or imply verification passed. Maintainer coverage is listed in [doc-helper regression guidance](docs/agents/skill-regression.md#doc-helper).
 
 ### Repository agent instructions
 
@@ -176,6 +198,7 @@ The generator extracts each task step's inputs, decisions, actions, outputs, acc
 | `package.json`                              | Single source of truth for published metadata and npm scripts |
 | `scripts/build.mjs`                         | Syncs `package.json` into plugin JSON files                  |
 | `scripts/deploy/deploy.mjs`                 | Symlinks `commands/`, `rules/`, `skills/` into harness dirs  |
+| `scripts/init.json`                         | Install catalog executed by `scripts/upgrade/init.mjs`         |
 | `scripts/skills.json`                       | Upstream skill catalog loaded as `SKILL_SOURCES`             |
 | `scripts/rules.json`                        | Upstream rule catalog loaded as `RULE_SOURCES` (currently empty) |
 | `scripts/upgrade/skill.mjs`                 | Syncs `skills.json` into `skills/<name>/`                    |

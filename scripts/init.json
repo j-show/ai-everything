@@ -1,0 +1,23 @@
+[
+  {
+    "skill": "darwin-skill",
+    "repo": "https://github.com/alchaincyf/darwin-skill",
+    "groups": [
+      "alchaincyf"
+    ]
+  },
+  {
+    "skill": "huashu-nuwa",
+    "repo": "https://github.com/alchaincyf/nuwa-skill",
+    "groups": [
+      "alchaincyf"
+    ]
+  },
+  {
+    "skill": "huashu-design",
+    "repo": "https://github.com/alchaincyf/huashu-design",
+    "groups": [
+      "alchaincyf"
+    ]
+  }
+]

@@ -49,8 +49,9 @@ For summary-only requests, stop here without staging or committing.
 
 Load `references/commit-message-format.md`.
 
-- User type in message (from `{{input}}` or conversation) → use it.
-- Else pick type by primary intent and weight rules in the reference.
+- Explicit user type for this message (from `{{input}}` or conversation) → use it; incidental words and previous commit types are not overrides.
+- Otherwise follow the reference's intent grouping, versioned contract evidence and same-type resolution; apply proportion and partial tie-break rules only when different types compete. Resolve missing evidence or an uncovered tie before finalizing the draft.
+- For mixed changes, briefly explain the selected type and which changes support its intent; keep this explanation outside the commit message.
 
 If the user only asked to **draft** a message, show the draft and **stop** before Step 4.
 

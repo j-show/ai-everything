@@ -8,6 +8,7 @@
 - [scripts/upgrade/rule.mjs](../../scripts/upgrade/rule.mjs) 从 [scripts/rules.json](../../scripts/rules.json) 加载 [RULE_SOURCES](../../scripts/rules.json)，写入 `rules/<rule>/`
 - [scripts/upgrade/download.mjs](../../scripts/upgrade/download.mjs) 提供下载、镜像替换和 CLI 辅助函数
 - [scripts/upgrade/report.mjs](../../scripts/upgrade/report.mjs) 提供并行报告
+- [scripts/upgrade/init.mjs](../../scripts/upgrade/init.mjs) 从 [scripts/init.json](../../scripts/init.json) 安装外部 skill 到当前项目的 `.agents/skills/`。它复用 `createArgumentParser` 与 `createSourceSelector`，不走 Git/`--fetch` 镜像替换，也不使用并行报告器。`--git` 与 `--fetch` 会被共用解析器接受，但不改变安装命令。
 
 `SKILL_SOURCES` 的字段是 `{ skill, repo, ref, path, groups }`。`RULE_SOURCES` 的字段是 `{ rule, repo, ref, path, groups }`。`ref` 是要下载的分支；当前每个技能都是 `main`。`RULE_SOURCES` 为空时，`upgrade:rule` 因没有可选规则而失败，不创建 `rules/`。帮助文本拼接 `<repo>/tree/<ref>/<path>`。`--git` 和 `--fetch` 都直接使用 `repo`、`path` 和 `ref`。分组从对应配置派生。修改后同步帮助、npm 快捷入口和双语 README。
 

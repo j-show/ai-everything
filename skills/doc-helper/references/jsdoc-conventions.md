@@ -1,6 +1,6 @@
 # JSDoc Conventions
 
-Load during Step 2.
+Load during Step 2 only for resolved JavaScript/TypeScript files, including JSX/TSX, MJS/CJS, MTS/CTS and declaration variants. Keep valid existing style; default to JSDoc when no convention exists.
 
 ## Coverage
 
@@ -11,14 +11,16 @@ Document: functions, methods, classes, interfaces (each property), types, enums,
 | Element | Required |
 | ------- | -------- |
 | All | One-sentence **current** behavior |
-| Parameters | `@param` |
-| Return | `@returns` when not void |
+| Parameters | `@param` for semantics not already clear from the signature |
+| Return | `@returns` for meaningful result semantics when not void |
 | Errors | Document escaping errors, including calls; distinguish synchronous throws from promise rejections |
 | Async | Describe resolution, rejection, and caught-error fallbacks in `@returns`; if using `@throws` for rejections, label them explicitly |
 
+For untyped JavaScript, derive documented types from verified contracts, implementation and callers, not identifier names. A truthiness guard does not prove a string type. If no narrower contract exists, omit the type or use `{*}` and describe the actual constraint; do not turn an observed sample argument into the only accepted type.
+
 ## TypeScript
 
-Prefer signatures for types; JSDoc for semantics signatures omit (side effects, `ms`/`px`, defaults). Use `@typedef` or named types for complex objects.
+Prefer existing signatures for types; JSDoc for semantics signatures omit (side effects, `ms`/`px`, defaults). In JavaScript, use an existing named type or `@typedef` when a complex object needs a documented shape. Do not add TypeScript declarations or repeat complete TS types just to document them. Declaration files describe contracts; inspect implementations/callers before asserting runtime behavior.
 
 ## Error semantics example
 
@@ -54,4 +56,10 @@ Follow the evidence and fallback table in SKILL.md: verify the installed/locked 
 
 ## Quality
 
-Match all branches and optional params; do not document removed parameters or wrong return shapes.
+Match all branches and optional params; do not document removed parameters or wrong return shapes. Preserve public interface property meanings without repeating their type annotations.
+
+## Inline comments and environment
+
+Use `//` or the existing block style; in JSX use valid comment placement such as `{/* ... */}` only where needed. Keep lint suppressions, type directives, source-map annotations and bundler hints unchanged. Never add a line break after `return`/`throw` just to make room for a comment, or restructure an expression-bodied callback; put its explanation immediately before the expression when no body exists.
+
+Read the owning package's module mode, JS/TS configuration and existing checks per language-routing.md. Missing type/doc tooling is a reported validation gap, not permission to install it. Do not treat JSDoc tags as a universal format for other languages.

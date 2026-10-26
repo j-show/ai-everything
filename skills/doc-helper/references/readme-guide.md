@@ -2,9 +2,9 @@
 
 Load during Step 4.
 
-## README vs JSDoc
+## README vs symbol documentation
 
-| README | JSDoc |
+| README | Symbol documentation |
 | ------ | ----- |
 | Positioning, install, run | Per-symbol behavior |
 | Scripts, env vars | Params, returns, throws |
@@ -28,7 +28,7 @@ Do not create translations or AGENTS files solely to complete a template. Preser
 
 - [ ] Name and one-line positioning
 - [ ] Environment requirements when applicable
-- [ ] Install and commands match `package.json` scripts
+- [ ] Install and commands match the owning module's actual configuration, using language-routing.md for evidence sources
 - [ ] Config / env vars when they exist
 - [ ] Directory structure and roles
 - [ ] Usage examples for exports or main workflows
@@ -36,3 +36,5 @@ Do not create translations or AGENTS files solely to complete a template. Preser
 ## Verify
 
 Check script names and target paths separately. If a declared command points to a missing file, report that limitation instead of presenting it as working. Do not run install, deployment, or service commands just to check documentation. No docs for unimplemented features; label examples or dependency behavior that could not be executed.
+
+Mixed projects may have separate Node, Maven/Gradle, Python and C/C++ commands. Keep each command tied to its module and working directory; do not require package.json in non-JS projects or translate another build system's commands into npm. README-only work reads source/configuration as evidence and never edits source. Unsupported code-comment languages can still supply README evidence; do not claim their comment route is supported.

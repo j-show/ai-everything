@@ -18,8 +18,6 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "prepare": "npm run init:darwin",
-    "init:darwin": "npx skills add alchaincyf/darwin-skill",
     "build": "node scripts/build.mjs",
     "deploy": "node scripts/deploy/deploy.mjs",
     "deploy:project": "npm run deploy -t project",
@@ -28,6 +26,7 @@
     "deploy:codex": "npm run deploy -t codex",
     "deploy:claude": "npm run deploy -t claude",
     "deploy:qcode": "npm run deploy -t qcode",
+    "upgrade:init": "node scripts/upgrade/init.mjs",
     "upgrade:skill": "node scripts/upgrade/skill.mjs",
     "upgrade:rule": "node scripts/upgrade/rule.mjs"
   },

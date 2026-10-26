@@ -10,7 +10,7 @@
 
 - [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/**/*.mjs` 使用 `import` 与现代 `fs` API）
 - 技能和规则升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
-- 默认 `--git` 不加载 `tar`。`--fetch` 只在提取归档时加载该开发依赖；使用前运行 `npm install --ignore-scripts` 安装。构建和部署脚本只依赖 Node 标准库。常规安装还会执行 `prepare` → `init:darwin`（`npx skills add alchaincyf/darwin-skill`）；需要该技能时可单独执行 `npm run init:darwin`。
+- 默认 `--git` 不加载 `tar`。`--fetch` 只在提取归档时加载该开发依赖；使用前运行 `npm install --ignore-scripts` 安装。构建和部署脚本只依赖 Node 标准库。当前没有 `prepare` 脚本。`npm run upgrade:init` 需要单独执行，会联网调用 `npx skills`。
 - **在 Windows 上部署**：钩子脚本需要 Git Bash 或其它 `bash`；`npm run deploy` 本身不依赖 bash
 
 ---
@@ -30,7 +30,16 @@
 | `npm run deploy:agent` | `npm run deploy -- -t agent` |
 | `npm run upgrade:skill` | `node scripts/upgrade/skill.mjs` |
 | `npm run upgrade:rule` | `node scripts/upgrade/rule.mjs` |
-| `npm run init:darwin` | `npx skills add alchaincyf/darwin-skill` |
+| `npm run upgrade:init` | `node scripts/upgrade/init.mjs` |
+
+`npm run upgrade:init` 读取 [`scripts/init.json`](scripts/init.json)。清单是 JSON 数组，每项为 `{ skill, repo, name, groups }`。`repo` 与 `name` 可省略。有 `repo` 时执行 `npx skills add <repo> --skill <skill> --agent universal --yes`；无 `repo` 且有 `name` 时执行 `npx skills add <name> --agent universal --yes`；两者都没有则跳过该条，且不中断后续条目。`--agent universal` 且不加 `-g`，只写入当前项目的 `.agents/skills/`，不安装到 Cursor、Claude、Codex 或其他 Agent 目录。可重复 `--skill <name>`，按名称选择时忽略分组；多个 `--<group>` 取并集。当前清单的分组是 `--alchaincyf`，包含 `darwin-skill`、`huashu-nuwa` 和 `huashu-design`。`--yes` 跳过 skills CLI 的确认。校验失败或某条安装非零退出时，脚本以退出码 1 结束，且不启动后续条目。安装访问网络。
+
+```bash
+npm run upgrade:init
+npm run upgrade:init -- --alchaincyf
+npm run upgrade:init -- --skill darwin-skill
+npm run upgrade:init -- --skill huashu-nuwa
+```
 
 ```bash
 # 链接到当前项目下的本地 harness 文件夹
@@ -88,9 +97,10 @@ npm run upgrade:skill -- --superpower                     # Superpowers 分组
 
 ```bash
 node --test scripts/deploy/deploy.test.mjs
+node --test scripts/upgrade/init.test.mjs
 ```
 
-部署测试使用临时项目。修改部署行为后，还需用 `npm run deploy:project "<临时项目>"` 实测已有内容保护和重复执行。当前检出没有升级脚本测试。`skills/**/test-prompts.json` 是 Git 忽略的本地行为场景清单，不是自动测试运行器。各技能的回归要求见 [AGENTS.md](AGENTS.md)。
+部署测试使用临时项目。修改部署行为后，还需用 `npm run deploy:project "<临时项目>"` 实测已有内容保护和重复执行。`upgrade:init` 测试注入安装运行器，不调用真实 `npx`，也不写入当前项目。`upgrade:skill` 与 `upgrade:rule` 的测试仍不在当前检出中。`skills/**/test-prompts.json` 是 Git 忽略的本地行为场景清单，不是自动测试运行器。各技能的回归要求见 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -118,11 +128,11 @@ node --test scripts/deploy/deploy.test.mjs
 
 | 技能 | 作用 |
 | ---- | ---- |
-| `commit-helper` | 只读总结/拟稿或限定范围 Git 提交，支持只提交指定路径的已暂存改动；保护其他暂存内容，以 UTF-8 消息保留字面字符 |
+| `commit-helper` | 只读总结/拟稿或限定范围 Git 提交，支持指定路径的已暂存改动；核对契约与改动版本，同类型目的直接选型，保护其他暂存内容，以 UTF-8 消息保留字面字符 |
 | `clean-helper` | 限定范围清理，默认以 `.review/clean-{timestamp}.md` 留档；复用授权与报告路径，遵守严格禁写要求，局部恢复时保留有效回归和用户修改 |
 | `test-helper` | 修正过时测试或补齐指定覆盖，保留回归与运行前置步骤，验证失败路径清理并如实报告未验证项 |
 | `review-helper` | 限定范围的 P0–P3 审查与修复；保留用户改动，按需隔离验证被审查快照并说明阻塞 |
-| `doc-helper` | 按范围从代码补文档，保留语言、核对证据，区分同步抛错、异步拒绝及错误回退 |
+| `doc-helper` | 逐文件和模块路由 JS/TS、Java、Python、C/C++ 注释规则，分别限定符号文档、行内注释与 README 章节，区分未解决目标和未验证检查 |
 | `coding-common` | 按目标仓库已有写法编写或修改代码；缺省规范内嵌于技能目录，覆盖不可变数据、错误处理、边界校验、测试先行与完成前自检 |
 | `coding-typescript` | 在 TS/JS 文件上编写或修改代码；先走已安装的 **coding-common**，再叠加类型、Zod、异步错误收窄与 React props 等语言缺省 |
 | `coding-java` | 在 `.java` 上编写或修改代码；先走已安装的 **coding-common**，再叠加命名、record/不可变、Optional、构造器注入、JUnit 5 与参数化查询等语言缺省 |
@@ -146,6 +156,18 @@ node --test scripts/deploy/deploy.test.mjs
 | Superpowers 分组 | 规划、测试、调试、审查与验证等七项上游技能；名称见上方选择参数表（`--superpower`） |
 
 上方选择参数表中的全部 14 个技能均为 Git 忽略的上游镜像；全新检出后可运行 `npm run upgrade:skill` 获取。其他技能源码随本仓库维护。本地存在文件不等于当前会话可调用；编排技能从会话登记入口解析依赖。
+
+### 代码注释与 README
+
+调用 `doc-helper` 时给出目标文件或符号及所需输出。它分别路由 JS/TS、Java、Python、C/C++，保留项目既有约定，并使用所属模块已有的检查环境。语言格式与边界见[使用说明](skills/doc-helper/README.md)。
+
+| 提示词示例 | 对应行为 |
+| --- | --- |
+| “只给 `src/parse.ts` 的公开 API 补 JSDoc，不改函数体和 README。” | 仅更新指定范围内的符号文档 |
+| “只给 `retry` 函数体补关键步骤行内注释，不加 JSDoc，不处理其他函数。” | 解释非显然的实现步骤，不补符号文档 |
+| “只纠正这个 Rust 项目 README 的 Usage，保持英文。” | 只读源码取证并修改指定章节；代码注释语言未支持不阻塞 README 任务 |
+
+已准确的目标检查后无需修改，也算已处理；仍有必需符号未解决时，即使同文件其他符号已更新，也只算部分完成。检查结果单独报告，工具缺失不会触发自动安装，也不能算验证通过。维护者的验证范围见 [doc-helper 回归指引](docs/agents/skill-regression.md#doc-helper)。
 
 ### 仓库代理说明
 
@@ -176,6 +198,7 @@ node --test scripts/deploy/deploy.test.mjs
 | `package.json`                              | 对外展示信息与 npm 脚本的单一来源                         |
 | `scripts/build.mjs`                         | 将 `package.json` 同步到各插件 JSON                      |
 | `scripts/deploy/deploy.mjs`                 | 将 `commands/`、`rules/`、`skills/` 符号链接到 harness 目录 |
+| `scripts/init.json`                         | 安装清单，由 `scripts/upgrade/init.mjs` 执行                |
 | `scripts/skills.json`                       | 上游技能目录，加载后为 `SKILL_SOURCES`                    |
 | `scripts/rules.json`                        | 上游规则目录，加载后为 `RULE_SOURCES`（当前为空）          |
 | `scripts/upgrade/skill.mjs`                 | 将 `skills.json` 同步到 `skills/<name>/`                 |
