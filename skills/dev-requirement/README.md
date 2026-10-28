@@ -16,10 +16,7 @@
 
 ```mermaid
 flowchart TD
-    A[检查需求与方案依赖] --> B[固定 dr-id]
-    B --> C[grilling 确认行为并写 requirement.md]
-    C --> D[grilling-with-docs 澄清书面歧义]
-    D --> E{本轮交付终点}
+    A[grilling-requirement：pre-tag=DR] --> E{本轮交付终点}
     E -->|仅需求| F[交付需求]
     E -->|方案或实现| G[brainstorming 写 proposal.md 并获批准]
     G --> H{是否要求实现}
@@ -29,24 +26,21 @@ flowchart TD
     K --> L[整体审查与编号验收]
 ```
 
-1. 需求阶段检查已安装的 grilling、grilling-with-docs、domain-modeling、brainstorming。缺失时停止，不用仓库同名目录替代或自动安装。
-2. 固定 `DR-<YYMMDD>-<feature-name>`，例如六位日期加小写功能名；名称稳定可推得时直接宣布，多件独立功能或名称不唯一才问。接受后不随续跑变动。
-3. 单独执行 grilling，确认共同理解后写 `docs/<dr-id>/requirement.md`。已确认行为编号，记录用户原话、非目标与未决；未决必须为“无”才继续。
-4. 再用 grilling-with-docs 检查已落盘需求的歧义和冲突，不重问明确条目。它加载 domain-modeling，术语和决策写根 GLOSSARY.md 或 ADR，不替代需求文件。
-5. 需要方案时调用 brainstorming，只写同目录 `proposal.md`，不写其默认 specs 目录；用户批准后才进入编码。不调用 writing-plans。
-6. 将编号划为可验收任务。按有效红灯、最小实现、绿灯和回归顺序执行；任务与整体审查覆盖暂存、未暂存、新增文件及必要调用者。
-7. 核实审查意见后修复、验证、复审，最后逐项对照编号验收；测试通过本身不代表需求全部覆盖。
+1. 调用已安装的 grilling-requirement，传入 pre-tag=DR。公共技能统一完成依赖检查、固定 ID、两阶段澄清和需求落盘；返回 task-id 记为 dr-id。
+2. 新 ID 使用八位日期；续跑核对公共技能的确认记录，文档存在不代表已批准。
+3. 需要方案时调用 brainstorming，只写同目录 `proposal.md`，不写其默认 specs 目录；用户批准后才进入编码。不调用 writing-plans。
+4. 将编号划为可验收任务。按有效红灯、最小实现、绿灯和回归顺序执行；任务与整体审查覆盖暂存、未暂存、新增文件及必要调用者。
+5. 核实审查意见后修复、验证、复审，最后逐项对照编号验收；测试通过本身不代表需求全部覆盖。
 
 ## 条件路由与依赖
 
 | 条件 | 技能或动作 |
 | --- | --- |
-| 初次需求访谈 | grilling |
-| 书面歧义、术语与决策 | grilling-with-docs → domain-modeling |
+| 需求访谈与书面澄清 | grilling-requirement（pre-tag=DR） |
 | 形成方案 | brainstorming |
 | 编码前 | 检查 test-driven-development、requesting-code-review、receiving-code-review、verification-before-completion |
 | 实现和最终成功声明 | TDD、审查及完成前验证；有反馈才调用 receiving-code-review |
-| 只要需求 | Step 3 后结束；当前入口仍要求通过需求阶段四项依赖检查 |
+| 只要需求 | Step 3 后结束；不检查 brainstorming 或编码依赖 |
 | 只要方案 | 方案批准后结束，不检查编码依赖 |
 | 批准后行为变化或用户要采纳新增行为 | 回到需求编号确认，再更新并批准方案 |
 
@@ -63,6 +57,7 @@ flowchart TD
 ## 文件导航
 
 - [SKILL.md](SKILL.md)：阶段、依赖、调用覆盖规则。
-- [artifacts.md](references/artifacts.md)：标识、续跑和两份文档内容。
+- 公共契约见 [grilling-requirement](../grilling-requirement/README.md)。
+- [artifacts.md](references/artifacts.md)：方案产物与后续续跑。
 - [implement.md](references/implement.md)：执行方式、TDD、审查反馈和最终验收。
-- [examples.md](references/examples.md)：多功能、仅文档、依赖缺失和回归场景。
+- [examples.md](references/examples.md)：调用衔接、仅文档、依赖缺失和回归场景。

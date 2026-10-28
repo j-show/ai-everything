@@ -15,6 +15,7 @@ hooks/       ── SessionStart 配置与启动脚本
 
 - 元数据与脚本入口以 [package.json](package.json) 为准。技能目录在 [scripts/skills.json](scripts/skills.json)，由 [scripts/upgrade/skill.mjs](scripts/upgrade/skill.mjs) 导出为 `SKILL_SOURCES`。规则目录在 [scripts/rules.json](scripts/rules.json)，由 [scripts/upgrade/rule.mjs](scripts/upgrade/rule.mjs) 导出为 `RULE_SOURCES`。下载与报告在 [download.mjs](scripts/upgrade/download.mjs) 和 [report.mjs](scripts/upgrade/report.mjs)。
 - 安装清单在 [scripts/init.json](scripts/init.json)，字段为 `{ skill, repo, name, groups }`，由 [scripts/upgrade/init.mjs](scripts/upgrade/init.mjs) 执行。`repo` 与 `name` 可省略。有 `repo` 时执行 `npx skills add <repo> --skill <skill> --agent universal --yes`；无 `repo` 且有 `name` 时执行 `npx skills add <name> --agent universal --yes`；两者都没有则跳过该条。`--agent universal` 且不加 `-g`，只写入当前项目的 `.agents/skills/`。参数选择复用 [download.mjs](scripts/upgrade/download.mjs) 的 `createArgumentParser` 与 `createSourceSelector`。
+- 需求公共流程由 `grilling-requirement` 维护，ID 为 `<pre-tag>-<YYYYMMDD>-<feature-name>`（默认 TK）；`dev-requirement` / `dev-debug` 分别传入 DR / DD，只维护后续方案、实现或修复流程。
 - 技能契约以 `skills/<name>/SKILL.md` 及其 `references/` 为准。
 - 审查编排由 `reviewer` 维护，范围和独立审查交接以 `review-helper/references/` 为准；显性检查点不新增逐轮审批。三个 Superpowers 审查与验证技能保持上游镜像，不在镜像中加入本地流程。
 - 自有技能随仓库维护。`.gitignore` 忽略 14 个上游镜像，以及 `.agents/`、`.review/`、`skills/**/test-prompts.json`。不能假设全新检出里有这些路径。

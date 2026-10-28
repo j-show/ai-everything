@@ -16,10 +16,7 @@
 
 ```mermaid
 flowchart TD
-    A[检查需求阶段依赖] --> B[固定 dd-id]
-    B --> C[grilling 确认行为并写 requirement.md]
-    C --> D[grilling-with-docs 消除书面歧义]
-    D --> E{是否只要文档}
+    A[grilling-requirement：pre-tag=DD] --> E{是否只要文档}
     E -->|是| F[交付文档]
     E -->|否| G[检查修复依赖与执行方式]
     G --> H[复现、追踪、对比、单一假设实验]
@@ -28,20 +25,18 @@ flowchart TD
     J --> K[原始缺陷复测与编号验收]
 ```
 
-1. 需求阶段确认已安装的 grilling、grilling-with-docs 和 domain-modeling。接受的缺陷标识固定为 `DD-<YYMMDD>-<feature-name>`，名称描述现象，不预设原因。
-2. 单独用 grilling 澄清并确认行为，写 `docs/<dd-id>/requirement.md`，包含用户原话、已确认行为编号、非目标和未决。冲突规则先确定如何合成或取舍。
-3. 使用 grilling-with-docs 检查书面歧义，它加载 domain-modeling 收术语和决策。已明确条目不重开；未决为“无”才进入修复。
-4. 修复前选择当前会话修复与独立审查、分别用子代理修复与审查，或全部当前会话自审；已有选择沿用。拒绝子代理或派发不可用时按 reference 转自审并披露。
-5. 按 systematic-debugging 复现、收集证据、对比正常路径、单一假设实验。失败前提不能传给后续步骤。
-6. 先运行能因原始缺陷失败的测试，再做最小修复和相关回归；已有有效失败测试可复用。导入错误、环境缺失或零测试不是有效红灯。
-7. 每个修复和整体差异都审查，反馈先核实再处理，最终建立“编号 → 原始复现 → 根因证据 → 红绿结果”的对应关系。
+1. 调用已安装的 grilling-requirement，传入 pre-tag=DD 和缺陷类型。公共技能统一完成依赖检查、固定 ID、两阶段澄清和需求落盘；返回 task-id 记为 dd-id。
+2. 新 ID 使用八位日期；续跑核对公共技能的确认记录，文档存在不代表已批准。
+3. 修复前选择当前会话修复与独立审查、分别用子代理修复与审查，或全部当前会话自审；已有选择沿用。拒绝子代理或派发不可用时按 reference 转自审并披露。
+4. 按 systematic-debugging 复现、收集证据、对比正常路径、单一假设实验。失败前提不能传给后续步骤。
+5. 先运行能因原始缺陷失败的测试，再做最小修复和相关回归；已有有效失败测试可复用。导入错误、环境缺失或零测试不是有效红灯。
+6. 每个修复和整体差异都审查，反馈先核实再处理，最终建立“编号 → 原始复现 → 根因证据 → 红绿结果”的对应关系。
 
 ## 内部路由
 
 | 条件 | 技能或行为 |
 | --- | --- |
-| 行为澄清 | grilling；此步不加载 domain-modeling |
-| 书面歧义和术语 | grilling-with-docs → domain-modeling |
+| 行为澄清、书面歧义与术语 | grilling-requirement（pre-tag=DD，缺陷任务） |
 | 澄清中开始只读技术诊断 | 先加载 systematic-debugging；缺失只暂停诊断 |
 | 进入修复阶段 | 检查 systematic-debugging、test-driven-development、requesting-code-review、receiving-code-review、verification-before-completion |
 | 有审查反馈 | receiving-code-review 核实后处理；错误或越界建议不直接实施 |
@@ -62,6 +57,7 @@ flowchart TD
 交付 requirement.md、修复编号、根因摘要、实际验证命令和结果、审查方式、未执行项与剩余问题。自审必须标明缺少独立审查；默认不建分支或提交。
 
 - [SKILL.md](SKILL.md)：阶段、需求澄清和流程覆盖。
-- [artifacts.md](references/artifacts.md)：标识、续跑和唯一缺陷文档。
+- 公共契约见 [grilling-requirement](../grilling-requirement/README.md)。
+- [artifacts.md](references/artifacts.md)：修复阶段续跑。
 - [fix.md](references/fix.md)：根因调查、实验恢复、TDD、审查和验收。
-- [examples.md](references/examples.md)：多缺陷、执行方式和回归场景。
+- [examples.md](references/examples.md)：执行方式和修复回归场景。

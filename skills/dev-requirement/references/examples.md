@@ -1,25 +1,19 @@
 # 例子
 
-用户提出多件功能、feature-name 不唯一或验证编码闭环时读取。例子用来核对控制流，不把其中的句子抄进产物。
-
-## 多件功能
-
-输入：「做需求：订单列表按状态筛选，另外再导出本月账单 CSV。」
-
-只问一次本轮 `dr-id` 覆盖哪一件。用户选筛选后，`dr-id` 为 `DR-261022-order-status-filter`（日期用本轮开始那天）。导出另开一轮，不写进同一份 requirement.md。
+验证调用衔接和编码闭环时读取；多任务与命名场景由 grilling-requirement 维护。例子用来核对控制流，不把其中的句子抄进产物。
 
 ## 单一功能走到实现
 
 输入：「做需求：订单列表只要按待支付、已发货筛选。」
 
-1. Step 2 用 grilling 问清空前沿。用户确认后写入 `docs/DR-261022-order-status-filter/requirement.md`，其中 B1 为待支付筛选，B2 为已发货筛选，「未决」为「无」。
-2. Step 3 用 grilling-with-docs 检查已落盘需求。若「只按待支付、已发货筛选」已确认且无歧义，不再追问是否包含已取消；只对真实缺口提问，并按 domain-modeling 收术语。
+1. Step 0–3 委托 grilling-requirement（pre-tag=DR），其 Step 2 用 grilling 问清空前沿。用户确认后写入 `docs/DR-20261022-order-status-filter/requirement.md`，其中 B1 为待支付筛选，B2 为已发货筛选，「未决」为「无」。
+2. 公共技能 Step 3 用 grilling-with-docs 检查已落盘需求。若「只按待支付、已发货筛选」已确认且无歧义，不再追问是否包含已取消；只对真实缺口提问，并按 domain-modeling 收术语。
 3. Step 4 用 brainstorming 把方案写入同目录 `proposal.md`。不创建 `docs/superpowers/specs/`。用户批准后不调用 writing-plans。
 4. Step 5 检查四项编码依赖并选择执行方式。用户拒绝所有子代理：当前会话按 TDD 实现 B1 与 B2，使用审查模板自审并披露缺少独立审查；编号范围不变。
 
 ## 依赖缺失
 
-输入：「/dev-requirement 导出本月账单 CSV。」会话技能列表里没有 grilling。
+输入：「/dev-requirement 导出本月账单 CSV。」会话技能列表里没有 grilling-requirement（或其必需依赖 grilling）。
 
 只输出「缺少已安装技能」及安装说明。不创建 `docs/`，不开始访谈。
 
@@ -41,5 +35,4 @@
 
 - **只要需求**：Step 3 确认完成后交付 requirement.md，不创建 proposal.md，不询问编码方式。
 - **明确续跑**：用户给出 dr-id、已确认进度和执行方式，文件内容与批准范围一致时直接继续；不再问是否继续或停在哪一步。两份文件存在但批准未知时，停在方案批准门禁。
-- **合取规则**：「7 天内且未发货可退款」是可同时成立的条件，不编造冲突，也不追问已能确定的 order-refund 名称；只澄清仍影响验收的实际歧义。
 - **用户改动**：起始状态含用户暂存或未暂存的其他功能时保留；编号约束只检查本轮生成的产品改动，不能据此清理用户内容。
