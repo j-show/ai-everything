@@ -7,19 +7,27 @@
 | 2026-10-28 订单退款，不传 pre-tag | TK-20261028-order-refund；跨午夜不重算 |
 | pre-tag=OPS，feature-name 为 orderRefund | OPS-20261028-order-refund |
 | 前缀含 ../ 或日期为 20260230 | 先澄清，未确认前不写目录 |
-| dev-requirement 调用 | pre-tag=DR；返回后由调用方处理方案 |
-| dev-debug 调用列表转圈缺陷 | pre-tag=DD；名称 order-list-spinner，不猜根因 |
+| dev-requirement 调用 | pre-tag=DR、proposal-mode=auto；需求确认后直接调用 brainstorming，当前方案批准后返回 |
+| dev-debug 调用列表转圈缺陷 | pre-tag=DD、proposal-mode=never；名称 order-list-spinner，不猜根因，不询问或生成方案 |
 | 同时提出筛选和导出 | 只问一次本轮覆盖哪一件 |
 | 只说修一下那个问题 | 等待明确缺陷后命名 |
 | 7 天内且未发货可退款 | 不把合取条件当冲突 |
 | 真正冲突，两轮只说两个都要 | 停止，不把推荐写成已确认行为 |
 | 缺 grilling 或 domain-modeling | 报缺失，不创建需求稿或开始访谈 |
-| 无 brainstorming，仅做需求 | 不阻塞，不生成 proposal.md |
+| 默认调用完成需求，尚无方案选择 | 交付或返回前询问是否生成，等待回答；不提前加载 brainstorming |
+| 默认询问后同意 / 拒绝 | 同意才加载 brainstorming 并生成同目录方案；拒绝则交付需求，无 brainstorming 也不阻塞 |
+| auto 或 ask 已同意，但缺 brainstorming | 保留需求，报告方案阻塞，不放行实现 |
+| never，已有 proposal.md 且无 brainstorming | 不检查该依赖，不修改或删除旧方案，跳过后返回 |
+| 自定义前缀 OPS，proposal-mode=auto | 按 auto 生成，不从前缀推断模式；非法模式先澄清 |
 | 需求稿在，无书面澄清记录 | 进入 Step 3，不凭文件存在跳过 |
 | 明确继续历史 DR-261022-order-refund，内容和确认一致 | 沿用原目录，不重命名、不重复访谈 |
 | 目标不可读或写前有用户编辑 | 不当空文件覆盖，保留无关内容 |
 | 书面歧义清单为空，本轮无新增/变更要求 | 完成实际检查和适用门禁，不改文件 |
 | 旧稿和确认记录一致，用户新增明确的 CSV 导出行为 | 旧完成记录不足以直接返回；纳入 Step 3，确认后接续编号，保留旧行为及无关说明 |
 | 审查者建议 CSV 导出，用户未要求采纳 | 不纳入需求，不阻塞原范围交付 |
+| 方案已生成但无批准，或用户编辑了方案 | 待当前方案批准；生成不等于批准，不进入代码 |
+| 当前需求、方案与批准记录一致的续跑 | 复用批准，不重问开关或重写方案 |
+| 已批准方案后新增行为 | Step 3 确认编号，保留模式及生成选择，更新受影响方案并重新批准 |
+| 方案阶段发现新行为或 proposal.md 不可读 | 新行为先回 Step 3；不可读时暂停写入，不能覆盖 |
 
 记录实际决策、写入或阻塞；静态检查与场景走查不能冒充真实访谈或修复验证。

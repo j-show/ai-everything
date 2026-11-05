@@ -1,24 +1,24 @@
 ---
 name: grilling-requirement
-description: "将功能需求或缺陷描述澄清为已编号的 requirement.md；用于需求拷问、书面歧义与已授权需求变更的澄清，或由 dev-requirement / dev-debug 调用。支持自定义 pre-tag（默认 TK）和已有任务续跑。"
+description: "将功能需求或缺陷描述澄清为已编号的 requirement.md；交付前按 proposal-mode 询问、自动生成或禁止生成技术方案。生成时调用 brainstorming 写同目录 proposal.md。用于需求拷问、书面歧义、需求变更及 dev-requirement / dev-debug 调用，支持 pre-tag（默认 TK）和续跑。"
 ---
 
 # Grilling Requirement
 
-只负责需求阶段：检查依赖 → 固定 task-id → grilling 确认并落盘 → grilling-with-docs 澄清书面歧义。两个访谈阶段分开执行；推荐不等于用户确认。
+统一需求澄清与可选方案：检查依赖 → 固定 task-id → grilling 确认并落盘 → grilling-with-docs 澄清书面歧义 → 按模式处理方案。两个访谈阶段分开执行；推荐不等于用户确认。
 
 ## 输入与输出
 
-- 输入：用户原文、目标项目、可选 pre-tag（默认 `TK`）、已有 task-id 和确认记录；缺陷调用方应注明任务类型。
+- 输入：用户原文、目标项目、可选 pre-tag（默认 `TK`）、proposal-mode（默认 `ask`）、已有 task-id 和确认记录；缺陷调用方应注明任务类型。
 - 新 ID 格式：`<pre-tag>-<YYYYMMDD>-<feature-name>`。规则与需求模板统一在 `references/artifacts.md`。
-- 唯一主产物：目标项目 `docs/<task-id>/requirement.md`。domain-modeling 的根目录术语表与 ADR 不替代它。
-- 本技能不检查 brainstorming，不写 proposal.md，不调用 writing-plans，不进入编码。
+- 必需产物：目标项目 `docs/<task-id>/requirement.md`；生成方案时另写同目录 `proposal.md`。domain-modeling 的根目录术语表与 ADR 不替代它们。
+- 不调用 writing-plans，不进入编码；仅在生成方案时检查 brainstorming。
 
-`pre-tag` 是调用参数，不是自动安装或命令行脚本；编排方传入的 DR / DD 覆盖默认 TK。
+`pre-tag` 与 `proposal-mode` 是调用参数，不是命令行脚本。模式独立于前缀：`ask` 在交付前询问；`auto` 直接进入方案；`never` 跳过询问及方案。非法模式先澄清，不默认为 ask。dev-requirement 传 DR / auto，dev-debug 传 DD / never。
 
 ## Step 0: 确认依赖 ⛔ BLOCKING
 
-确认下列需求技能已安装且当前会话可调用（以会话技能列表为准，不以仓库路径推断）。方案与编码依赖由调用方在对应阶段检查：
+确认下列需求技能已安装且当前会话可调用（以会话技能列表为准，不以仓库路径推断）。brainstorming 延迟到 Step 4 检查；编码依赖由调用方检查：
 
 | 技能 | 角色 |
 | --- | --- |
@@ -70,12 +70,28 @@ description: "将功能需求或缺陷描述澄清为已编号的 requirement.md
 
 🔴 写入门禁：待处理条目均有确认依据后，按 `references/artifacts.md` 就地更新对应段落与行为编号；未确认前不将推荐或新要求写入「已确认行为」。写前重读并保留不受影响的编号、无关说明和用户编辑。术语和决策写入根目录 `GLOSSARY.md` 或 ADR，不替代 requirement.md。
 
-本轮待处理条目已确认并落实到需求文档、「未决」为「无」、书面检查完成且确认记录覆盖当前内容，才完成 Step 3。交付 task-id、requirement.md 路径、已确认编号、实际完成阶段及确认记录；单独调用到此结束，编排调用返回调用方，不生成方案或实现代码。
+本轮待处理条目已确认并落实到需求文档、「未决」为「无」、书面检查完成且确认记录覆盖当前内容，才完成 Step 3。接着进入 Step 4，不能在此直接交付或返回调用方。
 
+## Step 4: 方案选择与 brainstorming ⚠️ REQUIRED
+
+先按 `references/artifacts.md` 核对续跑记录与当前需求；已有明确选择沿用。需要生成方案时，需求变化使旧方案批准失效，须更新受影响部分并重新批准；跳过模式不触碰旧方案。
+
+| 模式 | 动作 |
+| --- | --- |
+| `ask`（默认） | 🔴 CHECKPOINT：询问「是否根据 requirement.md 生成技术方案 proposal.md？」并等待。是：生成；否：跳过。已有明确选择不重问，未回答不能当作否 |
+| `auto` | 直接生成，不询问是否生成；不代表技术路线或方案已批准 |
+| `never` | 不询问，不检查或调用 brainstorming，不创建或更新 proposal.md；保留既有方案文件 |
+
+生成时按 Step 0 的登记入口规则加载 **brainstorming**，输入为当前已确认的 requirement.md、确认记录及已有方案。缺失或读失败时保留需求，报告方案阻塞，不伪装成跳过或完成。
+
+遵守 brainstorming 的技术路线讨论、选择和方案批准门禁，复用已有有效确认，不重新访谈已确认需求。以下覆盖其默认流程：设计只写 `docs/<task-id>/proposal.md`，内容与续跑要求见 `references/artifacts.md`；批准后交付或返回调用方，不调用 writing-plans，不自动建分支、提交或实施。用户拒绝所有子代理时，读者检查在当前会话执行并披露自审。
+
+交付或返回：task-id、requirement.md 路径、已确认编号、实际阶段及确认记录；另带方案模式、状态（已跳过 / 待选择 / 待批准 / 阻塞 / 已批准）与实际存在的 proposal.md 路径、批准依据。待选择、待批准和阻塞只报告当前进度，不能宣称完整流程完成或放行调用方编码。选择生成后，只有方案内容已落盘且当前版本获批，才完成本阶段。
 
 ## 完成核对
 
 - [ ] 从会话登记入口加载依赖，缺失或读失败时停止对应阶段
 - [ ] task-id 固定，需求路径唯一，续跑证据与当前内容一致
 - [ ] grilling 与书面歧义检查分开完成；行为已编号，未决为无
+- [ ] 交付或返回前已按方案模式完成 Step 4；auto 不问开关，never 不触发方案，生成不等于批准
 - [ ] 写前重读并保留无关内容；实际结果、未执行和阻塞分开报告

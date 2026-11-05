@@ -6,16 +6,14 @@
 
 输入：「做需求：订单列表只要按待支付、已发货筛选。」
 
-1. Step 0–3 委托 grilling-requirement（pre-tag=DR），其 Step 2 用 grilling 问清空前沿。用户确认后写入 `docs/DR-20261022-order-status-filter/requirement.md`，其中 B1 为待支付筛选，B2 为已发货筛选，「未决」为「无」。
-2. 公共技能 Step 3 用 grilling-with-docs 检查已落盘需求。若「只按待支付、已发货筛选」已确认且无歧义，不再追问是否包含已取消；只对真实缺口提问，并按 domain-modeling 收术语。
-3. Step 4 用 brainstorming 把方案写入同目录 `proposal.md`。不创建 `docs/superpowers/specs/`。用户批准后不调用 writing-plans。
-4. Step 5 检查四项编码依赖并选择执行方式。用户拒绝所有子代理：当前会话按 TDD 实现 B1 与 B2，使用审查模板自审并披露缺少独立审查；编号范围不变。
+1. 调用 grilling-requirement，传 pre-tag=DR、proposal-mode=auto。验收返回的 `docs/DR-20261022-order-status-filter/requirement.md`：B1 为待支付筛选、B2 为已发货筛选，书面澄清完成且「未决：无」，同目录 proposal.md 已获当前版本批准。
+2. 检查编码依赖并选择执行方式。用户拒绝所有子代理时，当前会话实现 B1、B2 并自审，披露缺少独立审查；不扩大编号范围或重复生成文档。
 
 ## 依赖缺失
 
-输入：「/dev-requirement 导出本月账单 CSV。」会话技能列表里没有 grilling-requirement（或其必需依赖 grilling）。
+输入：「/dev-requirement 导出本月账单 CSV。」会话技能列表里没有 grilling-requirement，或调用返回依赖阻塞。
 
-只输出「缺少已安装技能」及安装说明。不创建 `docs/`，不开始访谈。
+报告缺失项及安装提示，保留已有产物，不绕过调用或继续实现。
 
 ## 子代理
 
@@ -33,6 +31,8 @@
 
 ## 交付终点与续跑
 
-- **只要需求**：Step 3 确认完成后交付 requirement.md，不创建 proposal.md，不询问编码方式。
+- **只要文档**：默认自动生成 requirement.md 与 proposal.md，方案批准后交付，不询问编码方式。
+- **明确禁止方案**：用户限定“只写 requirement.md，不生成方案”时传 never，公共技能跳过方案后交付；不能把普通“只要文档”误判为此例外。
+- **方案依赖缺失**：需求完成但缺 brainstorming 时，保留 requirement.md 并报告方案阻塞，不降级成完整交付，不进入编码。
 - **明确续跑**：用户给出 dr-id、已确认进度和执行方式，文件内容与批准范围一致时直接继续；不再问是否继续或停在哪一步。两份文件存在但批准未知时，停在方案批准门禁。
 - **用户改动**：起始状态含用户暂存或未暂存的其他功能时保留；编号约束只检查本轮生成的产品改动，不能据此清理用户内容。

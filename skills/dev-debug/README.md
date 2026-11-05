@@ -16,33 +16,31 @@
 
 ```mermaid
 flowchart TD
-    A[grilling-requirement：pre-tag=DD] --> E{是否只要文档}
+    A[调用 grilling-requirement：DD / never] --> B[验收返回的需求]
+    B --> E{是否只要文档}
     E -->|是| F[交付文档]
     E -->|否| G[检查修复依赖与执行方式]
-    G --> H[复现、追踪、对比、单一假设实验]
-    H --> I[有效失败测试与最小修复]
+    G --> H[systematic-debugging]
+    H --> I[test-driven-development]
     I --> J[审查、核实、修复和复审]
     J --> K[原始缺陷复测与编号验收]
 ```
 
-1. 调用已安装的 grilling-requirement，传入 pre-tag=DD 和缺陷类型。公共技能统一完成依赖检查、固定 ID、两阶段澄清和需求落盘；返回 task-id 记为 dd-id。
-2. 新 ID 使用八位日期；续跑核对公共技能的确认记录，文档存在不代表已批准。
-3. 修复前选择当前会话修复与独立审查、分别用子代理修复与审查，或全部当前会话自审；已有选择沿用。拒绝子代理或派发不可用时按 reference 转自审并披露。
-4. 按 systematic-debugging 复现、收集证据、对比正常路径、单一假设实验。失败前提不能传给后续步骤。
-5. 先运行能因原始缺陷失败的测试，再做最小修复和相关回归；已有有效失败测试可复用。导入错误、环境缺失或零测试不是有效红灯。
-6. 每个修复和整体差异都审查，反馈先核实再处理，最终建立“编号 → 原始复现 → 根因证据 → 红绿结果”的对应关系。
+1. 调用 grilling-requirement，传入完整输入、目标项目、已有 ID / 确认记录、缺陷类型及 DD / never；返回 task-id 记为 dd-id，续跑和变更回调沿用参数。
+2. 验收 `docs/<dd-id>/requirement.md` 的已确认编号、书面澄清完成记录及「未决：无」。仅文档时交付；未满足验收时不进入修复。
+3. 修复前选择当前会话修复加独立审查、分别派发修复与审查，或全部当前会话自审；已有选择沿用。拒绝子代理或派发不可用时转自审并披露。
+4. 调用调查、测试、审查和验证技能；本入口维护范围、实验恢复和失败出口，不复述依赖技能的内部流程。最终交付编号对应的原始复现、根因证据与红绿结果。
 
 ## 内部路由
 
 | 条件 | 技能或行为 |
 | --- | --- |
-| 行为澄清、书面歧义与术语 | grilling-requirement（pre-tag=DD，缺陷任务） |
-| 澄清中开始只读技术诊断 | 先加载 systematic-debugging；缺失只暂停诊断 |
+| 行为澄清、书面歧义与术语 | grilling-requirement（pre-tag=DD、proposal-mode=never，缺陷任务） |
 | 进入修复阶段 | 检查 systematic-debugging、test-driven-development、requesting-code-review、receiving-code-review、verification-before-completion |
 | 有审查反馈 | receiving-code-review 核实后处理；错误或越界建议不直接实施 |
-| 行为改变或需扩展编号 | 回到 Step 3 确认，不能直接改代码 |
+| 行为有未确认变化或需扩展编号 | 携原参数回调 grilling-requirement，重新验收后继续 |
 
-不调用 brainstorming 或 writing-plans，不写 proposal.md，也不另加计划或调查报告；技术证据保留在会话，必要事实摘要可标注后追加 requirement.md。
+不询问是否生成方案，不检查或调用 brainstorming，不调用 writing-plans，不创建或更新 proposal.md；目录里的既有方案原样保留。也不另加计划或调查报告；技术证据保留在会话，必要事实摘要可标注后追加 requirement.md。
 
 ## 失败与恢复
 
