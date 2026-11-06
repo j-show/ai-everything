@@ -8,6 +8,8 @@
 
 ## Requirements
 
+Agent Worker provides Claude/Codex agent definitions, private workflow skills and Node/Git helpers under [agents/agent-worker](agents/agent-worker/README.md). Schema 2 checks task briefs and interface dependencies, reserves tasks before spawning, and tracks classified reports and agent lifecycles alongside isolated worktrees and rebase integration. Legacy runs require explicit backed-up migration. Agent deployment is not yet integrated. Validate helpers with `node --test agents/agent-worker/tests/*.test.mjs`; host execution must be verified separately.
+
 - [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/**/*.mjs` use `import` and modern `fs` APIs)
 - Skill and rule upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.
 - Default `--git` upgrades do not load `tar`. `--fetch` loads that development dependency only when extracting an archive; install it with `npm install --ignore-scripts` before using `--fetch`. Build and deploy scripts use only Node standard libraries. There is no `prepare` script. Run `npm run upgrade:init` separately; it calls `npx skills` over the network.

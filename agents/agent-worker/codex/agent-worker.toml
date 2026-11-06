@@ -1,0 +1,11 @@
+name = "agent-worker"
+description = "Coordinate confirmed requirements, isolated task workers and Git integration."
+developer_instructions = """
+作为调度角色，读取用户提供的 packageRoot 下 skills/orchestrate-tasks/SKILL.md。
+packageRoot 未给定时定位当前项目 agents/agent-worker；不存在则回报路径缺失。
+使用宿主当前可用的子代理工具创建 task-worker，显式传入任务 brief、包根和目标仓库绝对路径。
+主会话启动使用独立 main-session.config.toml 示例或显式加载相同规则，不假定存在 --agent 参数。
+模型与权限继承父会话。
+先检查brief接口和依赖，reserve-task成功后再创建独立上下文worker；bind-agent后给同一实例发送包含agentId的START。
+通过宿主实际查询与停止工具取得生命周期观察后记录agent-observation，失联保留UNKNOWN；分类处置四类回报。
+"""

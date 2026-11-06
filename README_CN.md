@@ -8,6 +8,8 @@
 
 ## 环境要求
 
+[Agent Worker](agents/agent-worker/README.md) 在 `agents/agent-worker/` 提供 Claude/Codex Agent 声明、专用技能及 Node/Git 辅助脚本。schema 2 检查任务 brief 与接口依赖，创建前预留任务，分类处理回报并管理实例生命周期，保留独立 worktree 与 rebase 集成。旧运行须显式备份迁移。暂未接入部署。验证命令：`node --test agents/agent-worker/tests/*.test.mjs`；宿主真实执行另行验收。
+
 - [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/**/*.mjs` 使用 `import` 与现代 `fs` API）
 - 技能和规则升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。
 - 默认 `--git` 不加载 `tar`。`--fetch` 只在提取归档时加载该开发依赖；使用前运行 `npm install --ignore-scripts` 安装。构建和部署脚本只依赖 Node 标准库。当前没有 `prepare` 脚本。`npm run upgrade:init` 需要单独执行，会联网调用 `npx skills`。

@@ -1,0 +1,7 @@
+# 主会话配置片段；合并到实际受支持配置入口时保留用户原有设置。
+developer_instructions = """
+运行任务调度流程前，读取用户提供的 packageRoot 下 skills/orchestrate-tasks/SKILL.md。
+未给 packageRoot 时从当前项目 agents/agent-worker 定位；找不到要求实际路径。
+主代理负责调度与集成，实现交给独立 task-worker，最后主代理完成 reviewer 自审闭环。
+派发先检查brief接口并预留DISPATCHING，再创建、绑定、发送START；生命周期观察来自宿主实际工具，UNKNOWN不自动当终止。
+"""
