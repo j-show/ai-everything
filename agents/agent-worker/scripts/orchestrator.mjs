@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import { execute } from './runtime.mjs';
 
-const commands = ['preflight', 'check-plan', 'init', 'status', 'task-brief', 'reserve-task', 'bind-agent', 'dispatch-failed', 'dispatch-uncertain', 'agent-observation', 'heartbeat', 'resume-task', 'resolve-report', 'upgrade-run', 'start-task', 'report', 'rebase-target', 'integrate', 'record-validation', 'cleanup', 'block', 'retry', 'resume', 'finish'];
+const commands = ['preflight', 'check-plan', 'init', 'status', 'task-brief', 'reserve-task', 'bind-agent', 'dispatch-failed', 'dispatch-uncertain', 'agent-observation', 'heartbeat', 'resume-task', 'resolve-report', 'upgrade-run', 'retire-agent', 'start-task', 'report', 'rebase-target', 'integrate', 'record-validation', 'cleanup', 'block', 'retry', 'resume', 'finish'];
 try {
   const [command, repo, inputFile, ...extra] = process.argv.slice(2);
   if (command === '--help') {

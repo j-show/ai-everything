@@ -12,4 +12,4 @@ description: Execute one feature or bugfix leaf task, verify and commit it, then
 3. 当前 worker 自行实现及自审，不递归创建代理。只改允许范围，README/AGENTS/接口文档按目标项目要求维护。范围不足、需求变化、无法解决冲突向主代理报告。错误导入、零测试、缺环境不算有效红灯或通过。
 4. 测试与审查通过后核对 diff 并提交，携完整预留身份、最近 start/resume 返回的 agent.executionVersion（report 的 agentVersion）、精确 base/result、reportId 和验证证据回报 DONE；有疑虑回报 DONE_WITH_CONCERNS 并分类。缺信息用 NEEDS_CONTEXT，无法继续用 BLOCKED，不伪造成功提交或测试；绑定后启动前也可请求上下文。报告后等待主代理恢复，提交不等于已集成。
 5. 主代理返回新 base 并恢复本实例时，以同一 attempt 在任务分支 rebase，解决冲突并重新验证。成功后用新 reportId 回报新 base/result。Git 未完成或验证失败保留现场；新基线前进可迭代，真实失败无新依据就停止。`heartbeat` 只报告活动，不把自报心跳当宿主停止观察。
-6. 由主代理集成、验证和清理。收到终止或接管通知后停止写入；不能自行删除 worktree 或回退目标分支。回报编号覆盖、命令/退出状态、根因证据（bug）、自审结论、未执行与阻塞。
+6. 由主代理集成、验证和清理。收到终止、退役或接管通知后停止写入，RETIRE 后不再恢复。完整输出每个嵌套命令结果，排空所有 cell/命令会话；禁止不受追踪的后台/脱离进程。不能自行删除 worktree 或回退目标分支。回报编号覆盖、实际命令和结果、自审结论、未执行与阻塞。

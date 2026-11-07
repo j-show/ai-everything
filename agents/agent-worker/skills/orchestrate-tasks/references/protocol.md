@@ -69,6 +69,16 @@ evidence 是非空数组，每项包含 `command`（可执行文件及参数数�
 
 两种版本不可混淆：宿主观察的 agentVersion 对应 agent.revision；worker 回报的 agentVersion 对应 agent.executionVersion。后者只在 start/resume 开放新一轮执行时递增。查询/同态观察不改变执行版本，重复或迟到的旧宿主回调也不能影响恢复后的新版本。
 
+### Codex 任务授权退役
+
+宿主仅暴露 completed/interrupted 而不支持关闭线程时，不把它们伪称 STOPPED。主代理先等待或中断实际执行、排空全部工具/cell/命令，再由创建该 worker 的直接控制器调用真实 list_agents。随后 `retire-agent` 携完整身份、当前 agent.revision（agentVersion）以及 `traceRoot`（隔离 CODEX_HOME/sessions 的绝对路径）。也可指定 workerTrace、observerTrace、observationCallId 的绝对原始 JSONL 证据。不得手造或改写宿主日志。
+
+适配器核对相同根 session_id、直接父子线程、worker 身份及预留时间窗口、真实 list_agents 调用与结果、completed/interrupted、未完成工具/cell/shell session 和观察时序。成功置协议 RETIRED 并保留原 hostState；它表示该任务授权撤销，不表示宿主线程删除。清理、释放、新实例接管、集成与完成会重新检查退休 worker 日志未改变；新活动使证明失效并阻塞。不得向 RETIRED 实例发送 followup/新任务，也不得让 worker 创建不受追踪的后台进程。
+
+无匹配观察、状态 not_found、未知后台活动、日志缺失或不支持的记录格式均拒绝退役，继续保留现场。线程记录与活跃写入者分别统计；该协议依赖可信控制器遵守授权，不宣称防御用户篡改本地日志或恶意进程绕过协议直接写文件。
+
+Codex 必须保留原始 JSONL 会话记录；不使用缺少父会话记录的 ephemeral 模式验证此路径。运行 cell 通过真实 wait 完成，shell session 通过实际轮询终态或同线程 CommandExecution 终态核对；外层 Script completed 本身不足以证明嵌套命令排空。worker 须完整输出嵌套结果，不透明动态执行、无法关联的后台工作一律保留为阻塞。若列表遗漏尚未退役的已知实例，可恢复同一实例做“无工具、无文件操作、只回复 QUIESCENT”的检查，再由直接创建者查询；不得重新创建同一任务或恢复已 RETIRED 实例。
+
 实例状态是 CREATED、ACTIVE、WAITING、STOP_REQUESTED、STOPPED、FAILED、UNKNOWN。worker 的 `heartbeat` 只记进度，不证明已停止，也不把 UNKNOWN 变成 ACTIVE；主代理发现超时用 dispatch-uncertain 记录未知，禁止因失联自动重派。等待 rebase 的 WAITING 仍占实例容量；BLOCKED 且实例已终止才释放容量，但保留文件范围。
 
 `block` 保存真实阻塞，禁止对 DISPATCHING 使用，以免创建仍在途却释放容量。`resume-task` 携当前身份及 resolution 恢复已知原实例，保持 attempt；不能恢复 UNKNOWN/终止实例。`retry` 仅用于换人，须当前身份、旧实例终止观察及新 resolution，产生新 attempt/预留，再创建并绑定全新实例，经 start-task 接管原 worktree。既有修改与失败计数保留；创建 INTENT 中断且尚无目录/分支时可重建，归属不明则保留现场。无新依据不反复 retry。

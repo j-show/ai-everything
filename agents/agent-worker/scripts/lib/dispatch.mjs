@@ -2,13 +2,22 @@ import { createBrief } from './brief.mjs';
 import { identity, terminal, reserveTask, bindAgent, agentObservation, releaseDispatch, resumeInstance, retryTask, agentState } from './lifecycle.mjs';
 import { resolveReport } from './reports.mjs';
 import { requireValue } from './validation.mjs';
+import { verifyQuiescence, verifyRetirement, findQuiescence } from './codex-retirement.mjs';
 
-export const dispatchCommands = new Set(['reserve-task', 'bind-agent', 'dispatch-failed', 'dispatch-uncertain', 'agent-observation', 'heartbeat', 'resume-task', 'resolve-report', 'retry']);
+export const dispatchCommands = new Set(['reserve-task', 'bind-agent', 'dispatch-failed', 'dispatch-uncertain', 'agent-observation', 'heartbeat', 'resume-task', 'resolve-report', 'retry', 'retire-agent']);
 
 /** Return a new task record. The runtime persists it under its repository lock. */
 export function dispatchCommand(run, t, command, input) {
   if (command === 'reserve-task') return reserveTask(run, t.id);
   requireValue(t.briefHash === createBrief(run, t.id).hash, 'Confirmed brief changed; re-confirm before dispatch');
+  if (command === 'retire-agent') {
+    identity(t, input);
+    requireValue(input.agentVersion === t.agent.revision, 'Stale retirement revision');
+    const evidence={...input,notBefore:t.reservedAt,notAfter:t.agent.boundAt};
+    const proof = input.traceRoot ? findQuiescence(t.agent.id,evidence) : verifyQuiescence(t.agent.id,evidence);
+    return { ...structuredClone(t), agent: { ...agentState(t.agent, 'RETIRED'), retirement: proof } };
+  }
+  if (t.agent?.retirement && ['retry', 'dispatch-failed'].includes(command)) verifyRetirement(t.agent.retirement);
   if (command === 'bind-agent') {
     requireValue(!Object.values(run.tasks).some(other => other.id !== t.id
       && (other.agent?.id === input.agentId || (other.history ?? []).some(old => old.agent?.id === input.agentId || old.legacyAgentId === input.agentId))), 'Instance already belongs to another task');

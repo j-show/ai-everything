@@ -17,6 +17,7 @@ hooks/       ── SessionStart 配置与启动脚本
 - 安装清单在 [scripts/init.json](scripts/init.json)，字段为 `{ skill, repo, name, groups }`，由 [scripts/upgrade/init.mjs](scripts/upgrade/init.mjs) 执行。`repo` 与 `name` 可省略。有 `repo` 时执行 `npx skills add <repo> --skill <skill> --agent universal --yes`；无 `repo` 且有 `name` 时执行 `npx skills add <name> --agent universal --yes`；两者都没有则跳过该条。`--agent universal` 且不加 `-g`，只写入当前项目的 `.agents/skills/`。参数选择复用 [download.mjs](scripts/upgrade/download.mjs) 的 `createArgumentParser` 与 `createSourceSelector`。
 - 需求与可选方案由 `grilling-requirement` 维护，ID 为 `<pre-tag>-<YYYYMMDD>-<feature-name>`（默认 TK）。交付前按 `proposal-mode=ask|auto|never` 询问、自动调用 brainstorming 写同目录 proposal.md，或禁止方案；`dev-requirement` 传 DR / auto，`dev-debug` 传 DD / never，只维护后续实现或修复。
 - 技能契约以 `skills/<name>/SKILL.md` 及其 `references/` 为准。
+- Agent Worker 的 RETIRED 表示有原始宿主日志支撑的任务授权退役，不等于线程已删除；禁止退休后恢复旧实例，原日志变更必须阻断清理/接管，真实验收仍只在临时仓库进行。
 - `agents/agent-worker/` 是独立 Agent 资源包，以其 README/运行协议为准，尚未接入部署。schema 2 先预留再创建/绑定，brief 校验接口依赖，分类回报与实例生命周期分开；旧状态显式备份升级，UNKNOWN 不当作停止。改动运行 `node --test agents/agent-worker/tests/*.test.mjs`，Git 写测试只用临时仓库，脚本与宿主验收分开报告。
 - `dev-requirement` / `dev-debug` 只维护依赖的调用参数、返回验收及自身编排覆盖，不复述依赖内部步骤或绑定其步骤号。
 - 审查编排由 `reviewer` 维护，范围和独立审查交接以 `review-helper/references/` 为准；显性检查点不新增逐轮审批。三个 Superpowers 审查与验证技能保持上游镜像，不在镜像中加入本地流程。
@@ -61,6 +62,7 @@ hooks/       ── SessionStart 配置与启动脚本
 
 | 何时阅读 | 文档 | 用途 |
 | --- | --- | --- |
+| 接续 Agent Worker 开发或换设备验收 | [交接入口](docs/TK-20261105-agent-task-orchestration/handoff.md) | 已批准需求、当前进度、历史证据与新设备待办 |
 | 修改部署路径、链接去重或部署验证 | [部署](docs/agents/deploy.md) | 目标目录和隔离验证 |
 | 修改技能或规则的升级来源、分组、下载方式或报告 | [升级器](docs/agents/upgrade-skill.md) | 共用下载、失败保留和回归 |
 | 修改 doc-helper 的注释、README 或交付规则 | [doc-helper 回归](docs/agents/skill-regression.md#doc-helper) | 语言与输出范围路由、符号级完成状态、验证边界 |

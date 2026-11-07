@@ -9,6 +9,7 @@ import { identity, requireAgent, readyForRun, terminal, agentState } from './lib
 import { dispatchCommands, dispatchCommand } from './lib/dispatch.mjs';
 import { classifyReport } from './lib/reports.mjs';
 import { upgradeRun } from './lib/migration.mjs';
+import { verifyRetirement } from './lib/codex-retirement.mjs';
 import { identifier, requireValue, evidence, overlaps, strings } from './lib/validation.mjs';
 
 const taskStates = new Set(['PENDING', 'DISPATCHING', 'RUNNING', 'READY', 'REBASING', 'MERGING', 'MERGED_PENDING_VALIDATION', 'CLEANUP_PENDING', 'INTEGRATED', 'BLOCKED', 'RECOVERY_REQUIRED']);
@@ -81,6 +82,7 @@ function start(ctx, run, input) {
   identity(t, input, false);
   if (!t.agent) return { status: 'WAITING_FOR_BINDING', taskId: t.id, attempt: t.attempt };
   identity(t, input); requireAgent(t, ['CREATED', 'ACTIVE']);
+  for (const old of t.history ?? []) if (old.agent?.retirement) verifyRetirement(old.agent.retirement);
   requireValue(!Object.values(run.tasks).some(x => ['MERGING', 'MERGED_PENDING_VALIDATION', 'RECOVERY_REQUIRED'].includes(x.status)), 'Integration requires verification/recovery');
   requireValue(clean(ctx.repo), 'Target must be clean');
   requireValue(typeof input.agentId === 'string' && input.agentId.trim(), 'Agent id required');
@@ -134,6 +136,7 @@ function report(ctx, run, t, input) {
 async function integrate(ctx, run, t) {
   requireValue(t.status === 'READY', 'Task must be READY');
   requireAgent(t, ['WAITING']);
+  for (const old of t.history ?? []) if (old.agent?.retirement) verifyRetirement(old.agent.retirement);
   requireValue(!Object.values(run.tasks).some(x => x.id !== t.id && ['MERGING', 'MERGED_PENDING_VALIDATION', 'RECOVERY_REQUIRED', 'BLOCKED'].includes(x.status) && x.transaction), 'Previous integration is unresolved');
   resourceCheck(run, t);
   requireValue(clean(ctx.repo) && clean(t.worktree) && head(t.worktree) === t.result, 'Worktree changed after report');
@@ -207,6 +210,8 @@ function cleanup(ctx, run, t, input) {
   if (t.status === 'INTEGRATED') return t;
   requireValue(t.status === 'CLEANUP_PENDING', 'Integration validation required before cleanup');
   requireValue(t.agent && terminal(t.agent.state), 'Terminal host observation required before cleanup');
+  if (t.agent.retirement) verifyRetirement(t.agent.retirement);
+  for (const old of t.history ?? []) if (old.agent?.retirement) verifyRetirement(old.agent.retirement);
   requireValue(ancestor(ctx.repo, t.result, head(ctx.repo)), 'Integrated result no longer in target history');
   if (fs.existsSync(t.worktree)) {
     resourceCheck(run, t);
@@ -258,6 +263,10 @@ export async function execute(cwd, command, input = {}) {
     if (command === 'resume') return resume(ctx, run);
     if (command === 'start-task') return start(ctx, run, input);
     if (command === 'finish') {
+      for (const t of Object.values(run.tasks)) {
+        if (t.agent?.retirement) verifyRetirement(t.agent.retirement);
+        for (const old of t.history??[]) if (old.agent?.retirement) verifyRetirement(old.agent.retirement);
+      }
       requireValue(run.status === 'REVIEW_REQUIRED' && input.reviewMode === 'main-self-review' && input.issuesClosed === true, 'Main review and all tasks must be complete');
       requireValue(clean(ctx.repo), 'Final target must be clean');
       run.finalEvidence = evidence(input.evidence, head(ctx.repo));

@@ -3,7 +3,7 @@ import { readyTasks } from './graph.mjs';
 import { createBrief, digest } from './brief.mjs';
 import { requireValue } from './validation.mjs';
 
-export const terminal = state => ['STOPPED', 'FAILED'].includes(state);
+export const terminal = state => ['STOPPED', 'FAILED', 'RETIRED'].includes(state);
 export const agentState = (agent, state, execution = false) => ({ ...structuredClone(agent), state,
   revision: (agent.revision ?? 0) + 1, executionVersion: (agent.executionVersion ?? 0) + (execution ? 1 : 0) });
 const agentStates = ['CREATED', 'ACTIVE', 'WAITING', 'STOP_REQUESTED', 'STOPPED', 'FAILED', 'UNKNOWN'];
@@ -41,7 +41,7 @@ export function bindAgent(t, input) {
   if (t.agent) { requireValue(t.agent.id === input.agentId, 'Task already bound to another instance'); return structuredClone(t); }
   requireValue(t.status === 'DISPATCHING', 'Task is not reserved for binding');
   requireValue(!(t.history ?? []).some(old => old.agent?.id === input.agentId || old.legacyAgentId === input.agentId), 'Previous instance id cannot bind a new attempt');
-  return { ...structuredClone(t), dispatchUncertain: false, agentId: input.agentId, agent: { id: input.agentId, state: 'CREATED', revision: 0, executionVersion: 0, observations: {}, observedAt: null, progressAt: null } };
+  return { ...structuredClone(t), dispatchUncertain: false, agentId: input.agentId, agent: { id: input.agentId, boundAt:new Date().toISOString(), state: 'CREATED', revision: 0, executionVersion: 0, observations: {}, observedAt: null, progressAt: null } };
 }
 export function agentObservation(t, input) {
   identity(t, input);

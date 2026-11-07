@@ -6,6 +6,12 @@
 
 schema 2 增加结构化 brief、生产/消费接口检查、DISPATCHING 预留和独立实例生命周期。主代理先预留，再用宿主创建工具创建并绑定实例，最后发送 START。任务回报区分 DONE、DONE_WITH_CONCERNS、NEEDS_CONTEXT、BLOCKED；观察与回报携带状态版本，旧消息不能覆盖恢复后的新状态。
 
+Codex 不能关闭线程时，可在执行静止、工具排空且真实日志证明成立后 `retire-agent` 撤销任务授权为 RETIRED，保留 completed/interrupted 原状态。它不等于线程被删除；后续发现旧实例活动就拒绝清理或接管。具体证据与限制见运行协议。
+
+[真实宿主验收](../../docs/TK-20261105-agent-task-orchestration/codex-acceptance.md)：当前 Codex 桌面原生子代理四个临时场景均 DONE；独立 CLI 与 Claude 的范围限制另列，不以单元测试代替宿主验收。
+
+换设备或接续验收，先读[开发交接](../../docs/TK-20261105-agent-task-orchestration/handoff.md)，其中区分历史结果、新设备检查和不可迁移的运行证据。
+
 ## 入口与使用
 
 Claude 与 Codex 声明分别在 `claude/` 和 `codex/`。本包尚未接入仓库部署器，资源存在不代表宿主已发现。按宿主原生方式加载声明，并在提示中传入 `packageRoot` 的绝对路径与目标仓库路径；本次交付不自动安装或改用户配置。

@@ -8,7 +8,7 @@
 
 ## Requirements
 
-Agent Worker provides Claude/Codex agent definitions, private workflow skills and Node/Git helpers under [agents/agent-worker](agents/agent-worker/README.md). Schema 2 checks task briefs and interface dependencies, reserves tasks before spawning, and tracks classified reports and agent lifecycles alongside isolated worktrees and rebase integration. Legacy runs require explicit backed-up migration. Agent deployment is not yet integrated. Validate helpers with `node --test agents/agent-worker/tests/*.test.mjs`; host execution must be verified separately.
+Agent Worker provides Claude/Codex definitions, dedicated skills and Node/Git helpers under [agents/agent-worker](agents/agent-worker/README.md): task briefs, interface checks, dispatch reservations, classified reports and isolated worktree integration. Codex retirement verifies raw host logs and revokes the task lease without claiming thread deletion. Legacy runs require explicit migration; deployment is not integrated. Validate with `node --test agents/agent-worker/tests/*.test.mjs`. See the [real-host acceptance scope and results](docs/TK-20261105-agent-task-orchestration/codex-acceptance.md) and [cross-device development handoff](docs/TK-20261105-agent-task-orchestration/handoff.md).
 
 - [Node.js](https://nodejs.org/) **22+** (ES modules; `scripts/**/*.mjs` use `import` and modern `fs` APIs)
 - Skill and rule upgrades default to Git shallow sparse checkout and require Git on `PATH`; use `--fetch` for HTTPS archive downloads.

@@ -8,7 +8,7 @@
 
 ## 环境要求
 
-[Agent Worker](agents/agent-worker/README.md) 在 `agents/agent-worker/` 提供 Claude/Codex Agent 声明、专用技能及 Node/Git 辅助脚本。schema 2 检查任务 brief 与接口依赖，创建前预留任务，分类处理回报并管理实例生命周期，保留独立 worktree 与 rebase 集成。旧运行须显式备份迁移。暂未接入部署。验证命令：`node --test agents/agent-worker/tests/*.test.mjs`；宿主真实执行另行验收。
+[Agent Worker](agents/agent-worker/README.md) 提供 Claude/Codex 声明、专用技能及 Node/Git 脚本：brief/接口检查、派发预留、分类回报和独立 worktree 集成。Codex 退役通过原始日志核验后撤销任务授权，不声称删除线程。旧运行须显式迁移，暂未接入部署。验证命令：`node --test agents/agent-worker/tests/*.test.mjs`；[真实宿主验收范围与结果](docs/TK-20261105-agent-task-orchestration/codex-acceptance.md)单独记录；换设备开发先读[交接入口](docs/TK-20261105-agent-task-orchestration/handoff.md)。
 
 - [Node.js](https://nodejs.org/) **22+**（ES 模块；`scripts/**/*.mjs` 使用 `import` 与现代 `fs` API）
 - 技能和规则升级默认使用 Git 浅层稀疏检出，要求 `PATH` 中有 Git；可通过 `--fetch` 改用 HTTPS 归档下载。

@@ -1,0 +1,78 @@
+{
+  "acceptanceDate": "2026-11-06",
+  "summaryCapturedDate": "2026-11-07",
+  "scope": "Codex desktop native child agents; temporary repositories only",
+  "rawEvidenceBundled": false,
+  "fixtureCommitsBelongToSourceRepository": false,
+  "standaloneCLI": "postfix full rerun blocked by automatic approval timeout",
+  "claude": "not validated",
+  "deployment": "excluded by user",
+  "audit": {
+    "runs": [
+      {
+        "case": 1,
+        "status": "DONE",
+        "commit": "779f30e155021dfc8d4730073a7cd4d0d1a742ea",
+        "tasks": 2,
+        "worktrees": 0,
+        "activeLeases": 0
+      },
+      {
+        "case": 2,
+        "status": "DONE",
+        "commit": "01b39f155b3b0150f6f5a8fbb04f3977d561f37d",
+        "tasks": 1,
+        "worktrees": 0,
+        "activeLeases": 0
+      },
+      {
+        "case": 3,
+        "status": "DONE",
+        "commit": "3cc625cd66c75bc1a323e37bb9fca1013716ed5a",
+        "tasks": 2,
+        "worktrees": 0,
+        "activeLeases": 0
+      },
+      {
+        "case": 4,
+        "status": "DONE",
+        "commit": "98ada91f6ee010be55e748341a9548f77a669261",
+        "tasks": 1,
+        "worktrees": 0,
+        "activeLeases": 0
+      }
+    ],
+    "spawnCounts": {
+      "accept_d1_a": 1,
+      "accept_d1_b": 1,
+      "accept_d2_uncertain": 1,
+      "accept_d3_a": 1,
+      "accept_d3_b": 1,
+      "accept_d4_old": 1,
+      "accept_d4_new": 1,
+      "accept_d2_run": 1
+    },
+    "duplicates": 0,
+    "activeLeases": 0,
+    "worktrees": 0,
+    "retiredInstances": 8,
+    "retainedHostRecords": "not deleted; source logs retained",
+    "knownActiveTestWriters": 0,
+    "globalUnknownOrphans": null,
+    "testedSourceDifferences": []
+  },
+  "testedScriptSha256": {
+    "scripts/lib/brief.mjs": "672406a42ede6922e1621fe8c5b5edce9f0cea612da48b3fabbe98d99a376ffe",
+    "scripts/lib/codex-retirement.mjs": "f5d8486d97b30b51f3c82d9e99b2e1184f5a4a6b869bbf9f813d687b934e8fcd",
+    "scripts/lib/dispatch.mjs": "12ec775a0ec5ab742cade172ddc2e0b3f5ab28a929c966d14453de5213ec0be5",
+    "scripts/lib/git.mjs": "07f8ad4da4f0ac85a83720a1bdf901e916782948b178b272d68b5a5987030978",
+    "scripts/lib/graph.mjs": "19793474b7d09f8995ba94525f0caca0da93b935dfc4b116993fbc96fe30eaa3",
+    "scripts/lib/lifecycle.mjs": "c9e91a0a483b3655bbbb81086e4f42d0976114a5aec2d170c23ce19053e71c0d",
+    "scripts/lib/migration.mjs": "49fd361d018ced4a04a73d54797d4122c11420f77622038dcf1a03d5b6ff1597",
+    "scripts/lib/reports.mjs": "0ab8d94f8e88107c8255ba24c4183b25fc5a9656a4432ca385720f29ec016154",
+    "scripts/lib/state.mjs": "ba66ec4182b1cf179d98a121d3580e7d54fde1fa5d214fed9aafc59520aa320b",
+    "scripts/lib/validation.mjs": "b2cd42cb41b13a5d6c42e9f831b960cd313e99b46e93afd6972bc4ea27cae588",
+    "scripts/orchestrator.mjs": "330b78ea8fe1c52fbfc5cdbdad66b6914ba5ac1f154c18d952ff4f009ac7d7c6",
+    "scripts/runtime.mjs": "2e39d40a775611bc0a415e66c1488c715e845f3a2953b57c9984529c00868647"
+  }
+}

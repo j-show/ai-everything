@@ -7,3 +7,5 @@
 派发先检查 brief 的输入输出接口与依赖，先预留 DISPATCHING 再创建、绑定和启动实例。DONE、DONE_WITH_CONCERNS、NEEDS_CONTEXT、BLOCKED 分别处置；任务进度与代理生命周期分开记录。UNKNOWN 不能触发自动换人，清理和接管须有终止观察。schema 1 显式备份升级，原实例恢复保持 attempt，换人产生新预留。
 
 失败暂停相关依赖，其他无关实现继续。缺少授权、技能或宿主能力时报告阻塞，恢复不覆盖未知现场。脚本参数、证据结构及状态见 [运行协议](references/protocol.md)，执行顺序以 [SKILL.md](SKILL.md) 为准。
+
+Codex 无法删除线程时，由真实日志证明执行静止和工具排空，再 retire-agent 撤销授权为 RETIRED；这不等于宿主线程终止或删除。当前及历史实例的新活动都会阻止清理、接管和最终完成。
